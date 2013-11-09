@@ -21,13 +21,14 @@ class GameWindow(pyglet.window.Window):
 
 		self.paused = False
 		self.camera = Vector(0,0)
-		self.currentSystem = solarsystem.SolarSystem(x=0, y=0)
 
 		#Basically targetting either 1920x1080 (and 1920x1200) at 1, or 1366x768 ish at 0.5
 		self.uiScale = 1
 		if self.width < 1400 or self.height < 800: self.uiScale = 0.5
 		
 		self.hud = hud.HUD(window=self, batch=self.hudBatch)
+		
+		self.currentSystem = solarsystem.SolarSystem(x=0, y=0, seed=0)
 	
 		pyglet.clock.schedule_interval(self.update, 1/60.0)
 	def update(self, dt):
@@ -67,6 +68,17 @@ class GameWindow(pyglet.window.Window):
 			return True
 		else:
 			return super(GameWindow, self).dispatch_event(event_type, *args)
+	def enterSystem(self, target):
+		self.currentSystem = solarsystem.SolarSystem(x=0, y=0, seed=target)
+		self.background.generate(seed=self.currentSystem.seed)
+		
+		self.playerShip.position = (750, 750)
+		self.playerShip.vel = Vector(-440, -440)
+		self.camera = Vector(100, 200)
+		
+		pyglet.clock.schedule_interval(self.playerShip.brake, 0.1)
+		def stopBrake(dt): pyglet.clock.unschedule(self.playerShip.brake)
+		pyglet.clock.schedule_once(stopBrake, 2.1)
 			
 
 argparser = OptionParser()

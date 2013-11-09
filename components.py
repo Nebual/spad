@@ -23,7 +23,7 @@ class Gun(object):
 			
 	def cannon(self):
 		bulletImg = resources.loadImage("bullet.png", center=True)
-		bullet = physicalobject.Bullet(x=self.ship.x, y=self.ship.y, img=bulletImg, batch=self.window.mainBatch)
+		bullet = physicalobject.Bullet(x=self.ship.x, y=self.ship.y, img=bulletImg, batch=self.window.currentSystem.batch)
 		bullet.rotation = self.ship.rotation
 		angleRadians = -math.radians(self.ship.rotation)
 		bullet.vel.x = (self.ship.vel.x + math.cos(angleRadians) * bullet.maxSpeed)
@@ -37,7 +37,7 @@ class Gun(object):
 		#direction.y *= 100
 		#target = Vector(direction.x - self.ship.x, direction.y - self.ship.y)	
 		bulletImg = resources.loadImage("bullet.png", center=True)
-		bullet = physicalobject.Bullet(x=self.ship.x, y=self.ship.y, img=bulletImg, batch=self.window.mainBatch)
+		bullet = physicalobject.Bullet(x=self.ship.x, y=self.ship.y, img=bulletImg, batch=self.window.currentSystem.batch)
 		bullet.vel.x = ((self.ship.vel.x/2) + tar.x - self.ship.x) * bullet.turretSpeed
 		bullet.vel.y = ((self.ship.vel.y/2) + tar.y - self.ship.y) * bullet.turretSpeed
 		self.window.currentSystem.tempObjs.append(bullet)	

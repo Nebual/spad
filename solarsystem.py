@@ -8,6 +8,7 @@ planetImages = [x for x in os.listdir("resources/planets/") if "png" in x or "jp
 class SolarSystem(object):
 	
 	def __init__(self, x=0, y=0, seed=0):
+		self.window = pyglet.window.get_platform().get_default_display().get_windows()[0]
 		self.batch = pyglet.graphics.Batch()
 		self.group1 = pyglet.graphics.OrderedGroup(1)
 		self.group2 = pyglet.graphics.OrderedGroup(2)
@@ -15,6 +16,7 @@ class SolarSystem(object):
 		starImage = resources.loadImage("sun.png", center=True) 
 		self.star = physicalobject.Sun(x=x, y=y, img=starImage, batch=self.batch, group=self.group1)
 		self.planets.append(self.star)
+		self.seed = seed
 		self.rand = random.Random()
 		self.rand.seed(73789 + seed*14032)				
 		self.ships = []
@@ -35,10 +37,12 @@ class SolarSystem(object):
 			self.planets.append(newPlanet)
 		self.radius = dist
 		
-		self.minimap = resources.loadImage("minimap.png")
+		self.minimap = resources.copyImage(resources.loadImage("minimap.png"))
+		self.window.hud.minimap.image = self.minimap
 		greenCircle = resources.loadImage("circle_green.png", center=True)
 		self.minimap.blit_into(resources.loadImage("circle_gold.png", center=True).image_data, 50, 50, 0)
 		for planet in self.planets:
+			if planet.isSun: continue
 			self.minimap.blit_into(greenCircle.image_data, int(50 + planet.x / dist * 50), int(50 + planet.y / dist * 50), 0)
 	
 	def nearestPlanet(self, vec):

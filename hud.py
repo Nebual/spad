@@ -16,7 +16,7 @@ class HUD(object):
 		self.hudScale = 1.0
 		
 		self.hudX, self.hudY = hudX, hudY = window.width-100, window.height-200 - 100*self.hudScale
-		self.minimap = pyglet.sprite.Sprite(img=window.currentSystem.minimap, x=window.width-100*self.hudScale, y=hudY+200, batch=batch, group=group0)
+		self.minimap = pyglet.sprite.Sprite(img=resources.loadImage("minimap.png"), x=window.width-100*self.hudScale, y=hudY+200, batch=batch, group=group0)
 		self.minimap.scale = self.hudScale
 		self.minimapPlayer = pyglet.sprite.Sprite(img=resources.loadImage("circle_silver.png"), batch=batch, group=group1)
 		

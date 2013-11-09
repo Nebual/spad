@@ -143,7 +143,7 @@ class Player(Ship):
 		self.hp = 1000 #We don't want player to die right now
 		self.thrust = 300.0
 		self.rotation = 135
-		self.starmode = 0
+		self.starmode = 1
 		self.keyHandler = key.KeyStateHandler()
 		self.credits = 10000
 		
@@ -173,7 +173,7 @@ class Player(Ship):
 			self.starmode += 1
 			if self.starmode > 3: self.starmode = 0
 			self.window.hud.modeLabel.text = "Starmode: "+str(self.starmode)
-			self.window.background.setNumStars(80, mode=self.starmode)
+			self.window.background.generate(mode=self.starmode)
 		elif symbol == key.L:
 			planet = self.window.hud.select(self.window.currentSystem.nearestPlanet(Vector(self.x, self.y)))
 			if isinstance(planet, Planet):
@@ -186,6 +186,15 @@ class Player(Ship):
 					print "You're too far from the planet to land!"
 		elif symbol == key.Z:
 			self.window.hud.deselect()
+		elif symbol == key.J:
+			#TODO: Add target system selector
+			if self.window.currentSystem.seed != 0:
+				self.targetSystem = 0
+			else:
+				self.targetSystem = 5
+			self.warpTime = 0
+			resources.warpSound.play()
+			pyglet.clock.schedule_interval(self.doWarp, 0.1)
 			
 	def keyRelease(self, symbol, modifiers):
 		pass
@@ -219,10 +228,18 @@ class Player(Ship):
 			self.window.camera.y += ((self.y - self.window.camera.y) - (self.window.height / 1.5)) * 3 * dt
 		elif (self.y - self.window.camera.y) < (self.window.height / 3):
 			self.window.camera.y += ((self.y - self.window.camera.y) - (self.window.height / 3)) * 3 * dt
-				
+	
+	def doWarp(self, dt):
+		self.warpTime += dt
+		angleRadians = -math.radians(self.rotation)
+		self.vel += Vector(math.cos(angleRadians), math.sin(angleRadians)) * (self.thrust/7 * (1+self.warpTime) * dt)
+		if self.warpTime > 6: #TODO: Time should be dependant on ship's acceleration - also sound time
+			self.window.enterSystem(self.targetSystem)
+			pyglet.clock.unschedule(self.doWarp)
 
 class Planet(PhysicalObject):
 	name = "undefined"
+	isSun = False
 	habited = False
 	hasTrade = False
 	hasMissions = False
