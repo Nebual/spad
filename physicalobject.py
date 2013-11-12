@@ -22,6 +22,8 @@ class PhysicalObject(pyglet.sprite.Sprite):
 	def update(self, dt):					#updates position, accounting for time elapsed (dt)
 		for planet in self.window.currentSystem.planets:
 			self.gravitate(dt, planet)
+		for obj in self.window.currentSystem.tempObjs:
+			self.gravitate(dt, obj)	
 		self.x += self.vel.x * dt
 		self.y += self.vel.y * dt
 		
@@ -70,7 +72,7 @@ class Ship(PhysicalObject):
 		self.dead = False
 		self.mainGuns = []
 		for gun in xrange(1):
-			gun = components.Gun(self)
+			gun = components.Gun(self, gunType="grav")
 			self.mainGuns.append(gun)
 		self.secondaryGuns = []
 		for gun in xrange(1):
@@ -195,6 +197,10 @@ class Player(Ship):
 			self.warpTime = 0
 			resources.warpSound.play()
 			pyglet.clock.schedule_interval(self.doWarp, 0.1)
+		elif symbol == key.C:
+			self.mainGuns[0] = components.Gun(self, gunType="cannon")
+		elif symbol == key.G:
+			self.mainGuns[0] = components.Gun(self, gunType="grav")			
 			
 	def keyRelease(self, symbol, modifiers):
 		pass
@@ -281,12 +287,13 @@ class Sun(Planet):
 	isSun = True
 
 class Bullet(PhysicalObject):
-	def __init__(self, *args, **kwargs):
+	def __init__(self, deathTime=0.5, *args, **kwargs):
 		super(Bullet, self).__init__(*args, **kwargs)
 		self.thrust = False
 		self.maxSpeed = 600
 		self.turretSpeed = 5
-		pyglet.clock.schedule_once(self.die, 0.5)		
+		self.deathTime = deathTime
+		pyglet.clock.schedule_once(self.die, self.deathTime)		
 		
 	def update(self, dt):					#updates position, accounting for time elapsed (dt)		
 		self.x += self.vel.x * dt
@@ -294,8 +301,8 @@ class Bullet(PhysicalObject):
 		self.checkCollision()
 	
 	def die(self, dt=0):
-		self.window.currentSystem.tempObjs.remove(self)
 		pyglet.clock.unschedule(self.die)
+		self.window.currentSystem.tempObjs.remove(self)
 		
 	def checkCollision(self):
 		for obj in self.window.currentSystem.ships:
@@ -306,3 +313,53 @@ class Bullet(PhysicalObject):
 		if hasattr(obj, "hp"):
 			obj.hp -= 10
 			self.die()
+
+
+class GravBullet(Bullet):									#Spawns a black hole when it dies
+	def die(self, dt=0):
+		super(GravBullet, self).die(dt)		
+		singImg = resources.loadImage("singularity.png", center=True)
+		singularity = Singularity(x=self.x, y=self.y, img=singImg, batch=self.window.currentSystem.batch, group=self.window.currentSystem.group1, deathTime=3)
+		self.window.currentSystem.tempObjs.append(singularity)
+		
+
+class Singularity(Bullet):									#Effect for gravity gun, spawned from GravBullet
+	def __init__(self, *args, **kwargs):					
+		super(Singularity, self).__init__(*args, **kwargs)
+		#self.deathTime = 10
+		self.gravity = self.width*self.height*5000			
+		self.radius = (self.width + self.height) / 400
+		self.opacity = 0.0									#TODO: Dying too early, figure out why.
+		self.spawned = False
+		self.despawning = False
+		pyglet.clock.unschedule(self.die)
+		pyglet.clock.schedule_once(self.despawn, self.deathTime)
+	
+	def update(self, dt):
+		super(Singularity, self).update(dt)
+		if not self.spawned:
+			self.fadeIn(dt)
+		if self.despawning:
+			self.fadeOut(dt)
+	
+	def fadeIn(self, dt):
+		if self.opacity < 255:
+			self.opacity += 200 * dt
+		if self.opacity >= 255:
+			self.opacity = 255
+			self.spawned = True
+		
+	def despawn(self, dt):			#seprate funct for changing flag so that fadeOut can take actual dt and not dt from clock.schedule_once
+		self.despawning = True	
+		
+	def fadeOut(self, dt):			#this triggers AFTER the scheduled death time, so allow an extra sec or 2 for death
+		if self.opacity > 0:
+			self.opacity -= 200 * dt
+		if self.opacity <= 0:
+			self.opacity = 0
+			self.die()
+	
+	def collide(self, obj):
+		if hasattr(obj, "hp"):
+			obj.hp -= 10
+			
