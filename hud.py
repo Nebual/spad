@@ -157,3 +157,13 @@ class Cargo(object):
 	def __init__(self, kind, quantity=1):
 		self.kind = kind
 		self.quantity = quantity
+		self.mass = 1.0
+		
+		if self.kind == "food":
+			self.mass = 0.5
+		elif self.kind == "steel":
+			self.mass = 1.0
+		elif self.kind == "lithium":
+			self.mass = 0.8
+		elif self.kind == "medicine":
+			self.mass = 0.25

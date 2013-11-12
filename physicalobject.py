@@ -16,7 +16,8 @@ class PhysicalObject(pyglet.sprite.Sprite):
 		self.window = pyglet.window.get_platform().get_default_display().get_windows()[0]
 		self.gravity = 0
 		self.rotateSpeed = 200.0
-		self.pathAngle = 0		
+		self.pathAngle = 0
+		self.thrust = 600.0				
 		
 		
 	def update(self, dt):					#updates position, accounting for time elapsed (dt)
@@ -28,8 +29,7 @@ class PhysicalObject(pyglet.sprite.Sprite):
 		self.y += self.vel.y * dt
 		
 			
-	def pathToDest(self, dt):		#paths to the selected destination
-			destination = self.window.hud.selected
+	def pathToDest(self, dt, destination):		#paths to the selected destination
 			path = Vector(destination.x - self.x, destination.y - self.y)					#line from player to destination
 			self.rotateToPath(path, dt)
 			if mathlib.approxCoTerminal(self.pathAngle, self.rotation, 10):
@@ -70,7 +70,10 @@ class Ship(PhysicalObject):
 		super(Ship, self).__init__(*args, **kwargs)
 		self.hp = 30
 		self.dead = False
+		self.shipType = "light"
 		self.mainGuns = []
+		self.baseMass = 0
+		self.mass = 0
 		for gun in xrange(1):
 			gun = components.Gun(self, gunType="grav")
 			self.mainGuns.append(gun)
@@ -81,11 +84,20 @@ class Ship(PhysicalObject):
 		self.cargo = {}
 		self.cargoMax = 50
 		self.credits = 0
+		if self.shipType == "light":
+			self.baseMass = 3.0
+		self.calcMass()
+		self.thrust /= self.mass		
 		
 	def update(self, dt):
 		super(Ship, self).update(dt)	
 		if self.hp <= 0:
 			self.explode(dt)
+	
+	def calcMass(self):
+		self.mass += self.baseMass
+		for item in self.cargo.values():
+			self.mass += item.mass * item.quantity
 	
 	def explode(self, dt):
 		if not self.dead:
@@ -143,7 +155,6 @@ class Player(Ship):
 		playerImage = resources.loadImage("playership.png", center=True)	#player texture
 		super(Player, self).__init__(img=playerImage, *args, **kwargs)
 		self.hp = 1000 #We don't want player to die right now
-		self.thrust = 300.0
 		self.rotation = 135
 		self.starmode = 1
 		self.keyHandler = key.KeyStateHandler()
@@ -219,7 +230,10 @@ class Player(Ship):
 		if self.keyHandler[key.X]:					#brake
 			self.brake(dt)
 		if self.keyHandler[key.T]:
-			self.pathToDest(dt)
+			if not self.window.hud.selected:
+				self.window.hud.select(self.window.currentSystem.nearestPlanet(Vector(self.x, self.y)))
+			dest = self.window.hud.selected
+			self.pathToDest(dt, dest)
 		if self.keyHandler[key.SPACE]:
 			self.fire(self.mainGuns)
 		self.updateCamera(dt)
@@ -289,7 +303,6 @@ class Sun(Planet):
 class Bullet(PhysicalObject):
 	def __init__(self, deathTime=0.5, *args, **kwargs):
 		super(Bullet, self).__init__(*args, **kwargs)
-		self.thrust = False
 		self.maxSpeed = 600
 		self.turretSpeed = 5
 		self.deathTime = deathTime
