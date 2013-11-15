@@ -97,14 +97,13 @@ class Ship(PhysicalObject):
 			self.mass += item.mass * item.quantity
 		self.thrust *= self.engine.strength/self.mass
 		
-	def initComponents(self):
+	def initComponents(self):									#default components, should later read in from somewhere 
 		for gun in self.mainGuns:
-			newGun = components.Gun(gunType="grav")
-			newGun.addToShip(self, self.mainGuns)
-		for gun in xrange(1):
-			gun = components.Gun(gunType="turret")
-			self.secondaryGuns.append(gun)
-			gun.ship = self		
+			newGun = components.GravGun()
+			newGun.addToShip(ship=self, slot=self.mainGuns)
+		for gun in self.secondaryGuns:
+			newGun = components.Turret()
+			newGun.addToShip(ship=self, slot=self.mainGuns)		
 			
 	def initShipType(self):
 		if self.shipType == "light":
@@ -144,7 +143,10 @@ class Ship(PhysicalObject):
 	def fire(self, gunList, vec=Vector(0,0)):
 		for gun in gunList:
 			if gun != 0:
-				gun.fire(vec)
+				if gun.gunType == "turret":
+					gun.fire(vec)
+				else:
+					gun.fire()
 			
 class AIShip(Ship):
 	def __init__(self, *args, **kwargs):
@@ -223,12 +225,12 @@ class Player(Ship):
 			pyglet.clock.schedule_interval(self.doWarp, 0.1)
 		elif symbol == key.C:
 			self.mainGuns[0] = 0
-			newGun = components.Gun(gunType="cannon")
-			newGun.addToShip(self, self.mainGuns) 
+			newGun = components.Cannon()
+			newGun.addToShip(ship=self, slot=self.mainGuns) 
 		elif symbol == key.G:
 			self.mainGuns[0] = 0
-			newGun = components.Gun(gunType="grav")
-			newGun.addToShip(self, self.mainGuns)			
+			newGun = components.GravGun()
+			newGun.addToShip(ship=self, slot=self.mainGuns)			
 			
 	def keyRelease(self, symbol, modifiers):
 		pass
