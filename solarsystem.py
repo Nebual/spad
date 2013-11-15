@@ -33,7 +33,7 @@ class SolarSystem(object):
 			planetImage = resources.loadImage("planets/"+kind, center=True)
 			newPlanet = physicalobject.Planet(x=self.star.x + newX, y=self.star.y + newY, img=planetImage, batch=self.batch)
 			newPlanet.populate(rand=self.rand, kind=kind)
-			newPlanet.scale *= 0.5 + self.rand.random() / 2.0
+			newPlanet.scale *= min(1, 0.65 + self.rand.random() / 2.0)
 			self.planets.append(newPlanet)
 		self.radius = dist
 		
