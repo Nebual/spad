@@ -8,13 +8,22 @@ class Component(object):
 	type = "undefined"
 	licenseCost = 0
 	img = "items/base.png"
+	def __init__(self, ship=None):
+		self.ship = ship
+		
+	def addToShip(self, newShip, slot):		#add a component to a ship. Slot must be a list, e.g. mainGuns
+		self.ship = newShip
+		for i in range(len(slot)):
+			if slot[i] == 0:
+				slot[i] = self
+				break
 
-class Gun(object):
+class Gun(Component):
 	
-	def __init__(self, ship, gunType="cannon"):
+	def __init__(self, gunType="cannon", *args, **kwargs):
+		super(Gun, self).__init__(*args, **kwargs)
 		self.window = pyglet.window.get_platform().get_default_display().get_windows()[0]	
 		self.shootTime = time.time()
-		self.ship = ship
 		self.delay = 0.25
 		self.gunType = gunType
 	
@@ -61,21 +70,36 @@ class Gun(object):
 		self.window.currentSystem.tempObjs.append(bullet)			
 
 
-class Cannon(Gun, Component):
+class Cannon(Gun):
 	type = "Laser Cannon I"
 	img = "items/laserGun1.png"
-	def __init__(self, ship=None):
-		super(Cannon, self).__init__(ship, gunType="cannon")
-class SingularityGun(Gun, Component):
+	def __init__(self):
+		super(Cannon, self).__init__(gunType="cannon")
+class SingularityGun(Gun):
 	type = "Singularity Launcher"
 	img = "items/singularityGun.png"
-	def __init__(self, ship=None):
-		super(SingularityGun, self).__init__(ship, gunType="grav")
+	def __init__(self):
+		super(SingularityGun, self).__init__(gunType="grav")
+
+
+class Engine(Component):
+	
+	def __init__(self, *args, **kwargs):
+		super(Engine, self).__init__(*args, **kwargs)
+		self.strength = 200
+
+class Battery(Component):
+	
+	def __init__(self, *args, **kwargs):
+		super(Battery, self).__init__(*args, **kwargs)
+		self.capacity = 100
+
+
 
 Components = []
 def init():
 	for name, Cls in inspect.getmembers(sys.modules[__name__], inspect.isclass):
-		if Component in Cls.__bases__:
+		if issubclass(Cls, Component):
 			#Create a new instance of each component
 			instance = Cls()
 			Components.append(instance)

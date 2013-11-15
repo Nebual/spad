@@ -11,13 +11,14 @@ class PhysicalObject(pyglet.sprite.Sprite):
 	def __init__(self, *args, **kwargs):
 		super(PhysicalObject, self).__init__(*args, **kwargs)
 		
-		self.maxSpeed = 600
+		self.maxSpeed = 600.0
 		self.vel = Vector(0.0, 0.0)
 		self.window = pyglet.window.get_platform().get_default_display().get_windows()[0]
 		self.gravity = 0
 		self.rotateSpeed = 200.0
 		self.pathAngle = 0
-		self.thrust = 600.0				
+		self.baseThrust = 300.0
+		self.thrust = self.baseThrust			
 		
 		
 	def update(self, dt):					#updates position, accounting for time elapsed (dt)
@@ -71,34 +72,44 @@ class Ship(PhysicalObject):
 		self.hp = 30
 		self.dead = False
 		self.shipType = "light"
-		self.mainGuns = []
 		self.baseMass = 0
-		self.mass = 0
-		for gun in xrange(1):
-			gun = components.Gun(self, gunType="grav")
-			self.mainGuns.append(gun)
-		self.secondaryGuns = []
-		for gun in xrange(1):
-			gun = components.Gun(self, gunType="turret")
-			self.secondaryGuns.append(gun)
+		self.mass = self.baseMass
+		self.mainGuns = [0 for x in range(1)]							#slots for components (room for 1 by deafault)
+		self.secondaryGuns = [0 for x in range(1)]						#empty slots represented by a 0
+		self.battery = [0 for x in range(1)]
+		self.engine = components.Engine(ship=self)		
 		self.cargo = {}
 		self.cargoMax = 50
-		self.credits = 0
-		if self.shipType == "light":
-			self.baseMass = 3.0
-		self.calcMass()
-		self.thrust /= self.mass		
-		
+		self.credits = 0	
+		self.initShipType()
+		self.initComponents()	
+		self.updateMass()
+				
 	def update(self, dt):
 		super(Ship, self).update(dt)	
 		if self.hp <= 0:
 			self.explode(dt)
-	
-	def calcMass(self):
-		self.mass += self.baseMass
+		
+	def updateMass(self):							#update mass and thrust based on how much cargo we have
+		self.mass = self.baseMass
+		self.thrust = self.baseThrust
 		for item in self.cargo.values():
 			self.mass += item.mass * item.quantity
-	
+		self.thrust *= self.engine.strength/self.mass
+		
+	def initComponents(self):
+		for gun in self.mainGuns:
+			newGun = components.Gun(gunType="grav")
+			newGun.addToShip(self, self.mainGuns)
+		for gun in xrange(1):
+			gun = components.Gun(gunType="turret")
+			self.secondaryGuns.append(gun)
+			gun.ship = self		
+			
+	def initShipType(self):
+		if self.shipType == "light":
+			self.baseMass = 270.0								
+		
 	def explode(self, dt):
 		if not self.dead:
 			self.dead = True
@@ -132,7 +143,8 @@ class Ship(PhysicalObject):
 	
 	def fire(self, gunList, vec=Vector(0,0)):
 		for gun in gunList:
-			gun.fire(vec)
+			if gun != 0:
+				gun.fire(vec)
 			
 class AIShip(Ship):
 	def __init__(self, *args, **kwargs):
@@ -210,9 +222,13 @@ class Player(Ship):
 			resources.warpSound.play()
 			pyglet.clock.schedule_interval(self.doWarp, 0.1)
 		elif symbol == key.C:
-			self.mainGuns[0] = components.Gun(self, gunType="cannon")
+			self.mainGuns[0] = 0
+			newGun = components.Gun(gunType="cannon")
+			newGun.addToShip(self, self.mainGuns) 
 		elif symbol == key.G:
-			self.mainGuns[0] = components.Gun(self, gunType="grav")			
+			self.mainGuns[0] = 0
+			newGun = components.Gun(gunType="grav")
+			newGun.addToShip(self, self.mainGuns)			
 			
 	def keyRelease(self, symbol, modifiers):
 		pass

@@ -178,6 +178,7 @@ class PlanetFrame(Frame):
 				ply.cargo[kind] = Cargo(kind, purchased)
 			ply.credits -= price * purchased
 			f.goods[kind+"cargo"].text = str(ply.cargo[kind].quantity)
+			ply.updateMass()
 		def sell(kind):
 			ply = self.window.playerShip
 			if kind not in ply.cargo: return
@@ -189,6 +190,7 @@ class PlanetFrame(Frame):
 			if ply.cargo[kind].quantity == 0: del ply.cargo[kind]
 			
 			f.goods[kind+"cargo"].text = str(kind in ply.cargo and ply.cargo[kind].quantity or 0)
+			ply.updateMass()
 		i=0
 		plyCargo = self.window.playerShip.cargo
 		for kind, price in self.planet.goods.items():
@@ -233,16 +235,16 @@ class PlanetFrame(Frame):
 
 
 class Cargo(object):
-	def __init__(self, kind, quantity=1):
+	def __init__(self, kind, quantity=1):			#mass in tonnes per cubic meter
 		self.kind = kind
 		self.quantity = quantity
 		self.mass = 1.0
 		
 		if self.kind == "food":
-			self.mass = 0.5
+			self.mass = 0.04
 		elif self.kind == "steel":
-			self.mass = 1.0
+			self.mass = 7.85
 		elif self.kind == "lithium":
-			self.mass = 0.8
+			self.mass = 0.1
 		elif self.kind == "medicine":
-			self.mass = 0.25
+			self.mass = 0.05
