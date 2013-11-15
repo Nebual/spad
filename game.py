@@ -3,7 +3,7 @@ sys.path.append("..")
 from optparse import OptionParser
 import pyglet
 
-import physicalobject, resources, solarsystem, hud
+import physicalobject, resources, solarsystem, hud, components
 from background import Background
 from mathlib import Vector
 
@@ -29,6 +29,8 @@ class GameWindow(pyglet.window.Window):
 		self.hud = hud.HUD(window=self, batch=self.hudBatch)
 		
 		self.currentSystem = solarsystem.SolarSystem(x=0, y=0, seed=0)
+		
+		components.init()
 	
 		pyglet.clock.schedule_interval(self.update, 1/60.0)
 	def update(self, dt):

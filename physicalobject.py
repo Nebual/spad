@@ -159,6 +159,7 @@ class Player(Ship):
 		self.starmode = 1
 		self.keyHandler = key.KeyStateHandler()
 		self.credits = 10000
+		self.licenses = {}
 		
 		@self.window.event
 		def on_key_press(symbol, modifiers):

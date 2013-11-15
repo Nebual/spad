@@ -1,6 +1,6 @@
 import sys
 import pyglet
-import resources
+import resources, components
 
 group0 = pyglet.graphics.OrderedGroup(0)
 group1 = pyglet.graphics.OrderedGroup(1)
@@ -47,6 +47,53 @@ class HUD(object):
 		self.selected = None
 		self.selectionSprite.visible = False
 
+class Button(pyglet.sprite.Sprite):
+	_enabled = True
+	def __init__(self, x, y, text, callback=lambda: 0, args=(), size="500", scale=1, batch=None):
+		super(Button, self).__init__(img=resources.loadImage("button_"+str(size)+".png", center=True), x=x, y=y, batch=batch, group=group1)
+		self.scale = scale
+		self.label = pyglet.text.Label(text=text, x=self.x, y=self.y, anchor_x="center", anchor_y="center", batch=batch, group=group2)
+		self.pressed = self.pressedBackup = callback
+		self.args = self.argsBackup = args
+	
+	@property
+	def enabled(self): return _enabled
+	@enabled.setter
+	def enabled(self, value):
+		_enabled = value
+		
+		if value:
+			self.pressed = self.pressedBackup
+			self.args = self.argsBackup
+			self.label.color = self.label.color[:-1] + (255,) #Reset alpha
+		else:
+			self.pressed = lambda: 0
+			self.args = ()
+			self.label.color = self.label.color[:-1] + (127,) #Set the alpha to 50% to make it look greyed out
+class ImgButton(pyglet.sprite.Sprite):
+	_enabled = True
+	def __init__(self, x, y, img="items/base.png", text="", callback=lambda: 0, args=(), scale=1, batch=None):
+		super(ImgButton, self).__init__(img=resources.loadImage(img, center=True), x=x, y=y, batch=batch, group=group1)
+		self.scale = scale
+		self.text = text
+		self.pressed = self.pressedBackup = callback
+		self.args = self.argsBackup = args
+	
+	@property
+	def enabled(self): return _enabled
+	@enabled.setter
+	def enabled(self, value):
+		_enabled = value
+		
+		if value:
+			self.pressed = self.pressedBackup
+			self.args = self.argsBackup
+			self.opacity = 255
+		else:
+			self.pressed = lambda: 0
+			self.args = ()
+			self.opacity = 127 #Set the alpha to 50% to make it look greyed out
+
 largeWindow = resources.loadImage("largewindow.png", center=True)
 
 class Frame(object):
@@ -61,23 +108,23 @@ class Frame(object):
 		self.background = pyglet.sprite.Sprite(img=largeWindow, x=self.window.width/2, y=self.window.height/2, batch=self.batch, group=group0)
 		self.background.scale = self.scale
 		
-		self.titleLabel = pyglet.text.Label(text=title, x=self.window.width/2, y=self.window.height/2 + 400*self.scale - 40, anchor_x="center", batch=self.batch, group=group1)
+		self.titleLabel = pyglet.text.Label(text=title, x=self.window.width/2, y=self.window.height/2 + 400*self.scale - 25, anchor_x="center", batch=self.batch, group=group1)
 		
 		if start: self.start()
 		
-	def addButton(self,x,y,text,callback, args=(), size="500"):
-		sprite = pyglet.sprite.Sprite(img=resources.loadImage("button_"+str(size)+".png", center=True), x=self.window.width/2 + x*self.scale, y=self.window.height/2 + y*self.scale, batch=self.batch, group=group1)
-		sprite.scale = self.scale
-		sprite.label = pyglet.text.Label(text=text, x=sprite.x, y=sprite.y, anchor_x="center", anchor_y="center", batch=self.batch, group=group2)
-		sprite.pressed = callback
-		sprite.args = args
-		self.buttons.append(sprite)
-		return sprite
+	def addButton(self, x, y, text, callback=lambda: 0, args=(), size="500"):
+		but = Button(self.window.width/2 + x*self.scale, self.window.height/2 + y*self.scale, text, callback, args, size, scale=self.scale, batch=self.batch)
+		self.buttons.append(but)
+		return but
 	def addLabel(self,x,y,text, anchor_x="center"):
 		label = pyglet.text.Label(text=text, font_name=monoFont,x=self.window.width/2 + x*self.scale, y=self.window.height/2 + y*self.scale, anchor_x=anchor_x, anchor_y="center", batch=self.batch, group=group1)
 		label.scale = self.scale
 		self.elements.append(label)
 		return label
+	def addImgButton(self, x, y, img, text="", callback=lambda: 0, args=()):
+		but = ImgButton(self.window.width/2 + x*self.scale, self.window.height/2 + y*self.scale, img, text, callback, args, scale=self.scale, batch=self.batch)
+		self.buttons.append(but)
+		return but
 		
 	def on_mouse_press(self, x, y, button, modifiers):
 		for but in self.buttons:
@@ -113,6 +160,7 @@ class PlanetFrame(Frame):
 		
 		if planet.hasTrade: self.addButton(-300, 200, "Trade Center", self.openTrade)
 		if planet.hasMissions: self.addButton(-300, 100, "Mission Bounty Board", self.openMissions)
+		if planet.hasParts: self.addButton(-300, -25, "Component Fabricator", self.openParts)
 		
 		self.addButton(-300, -300, "Depart", self.stop)
 	def openTrade(self):
@@ -129,7 +177,7 @@ class PlanetFrame(Frame):
 			else:
 				ply.cargo[kind] = Cargo(kind, purchased)
 			ply.credits -= price * purchased
-			f.goods[kind+"total"].text = str(ply.cargo[kind].quantity)
+			f.goods[kind+"cargo"].text = str(ply.cargo[kind].quantity)
 		def sell(kind):
 			ply = self.window.playerShip
 			if kind not in ply.cargo: return
@@ -137,20 +185,51 @@ class PlanetFrame(Frame):
 			purchased = min((ply.cargo[kind].quantity % 10) or 10, ply.cargo[kind].quantity)
 			
 			ply.cargo[kind].quantity -= purchased
-			ply.credits += self.planet.goods[kind] * purchased
+			ply.credits += self.planet.goods[kind] * purchased * 0.9
 			if ply.cargo[kind].quantity == 0: del ply.cargo[kind]
 			
-			f.goods[kind+"total"].text = str(kind in ply.cargo and ply.cargo[kind].quantity or 0)
+			f.goods[kind+"cargo"].text = str(kind in ply.cargo and ply.cargo[kind].quantity or 0)
 		i=0
 		plyCargo = self.window.playerShip.cargo
 		for kind, price in self.planet.goods.items():
 			f.goods[kind] = f.addLabel(-500, 240 - i*80, kind.capitalize()+": "+("$"+str(price)).rjust(14-len(kind)), anchor_x="left")
-			f.goods[kind+"total"] = f.addLabel(0, 240 - i*80, str(kind in plyCargo and plyCargo[kind].quantity or 0), anchor_x="left")
+			f.goods[kind+"cargo"] = f.addLabel(0, 240 - i*80, str(kind in plyCargo and plyCargo[kind].quantity or 0), anchor_x="left")
 			f.goods[kind+"sell"] = f.addButton(275, 240 - i*80, "Sell", sell, (kind,), size="125")
 			f.goods[kind+"buy"] = f.addButton(425, 240 - i*80, "Buy", buy, (kind,), size="125")
 			i+=1
+		f.addButton(-300, -300, "Leave", f.stop)
+		
 	def openMissions(self):
 		self.missionFrame = Frame("Mission Bounty Board", scale=0.8)
+	
+	def openParts(self):
+		f = self.partsFrame = Frame("Component Fabrication Lab", scale=0.8)
+		f.selected = None
+		ply = self.window.playerShip
+		
+		def update():
+			f.licenseButton.enabled = f.selected and not ply.licenses[f.selected.type] and ply.credits >= f.selected.licenseCost
+			f.buildButton.enabled = f.selected and ply.licenses[f.selected.type]#Also check they have the cargo/$$$
+		
+		def buyLicense():
+			#Check if nothings selected, or the player already owns that license, or if the player lacks the money
+			if f.selected and not ply.licenses[f.selected.type] and ply.credits >= f.selected.licenseCost:
+				ply.licenses[f.selected.type] = True
+				ply.credits -= f.selected.licenseCost
+				update()
+		
+		f.licenseButton = f.addButton(-450, -280, "License", buyLicense, size="250")
+		f.licenseCost = f.addLabel(-520, -350, "$0", anchor_x="left")
+		
+		f.buildButton = f.addButton(-200, -280, "Build", buyLicense, size="250")
+		
+		def select(item):
+			f.selected = item
+		i = 0
+		f.items = []
+		for item in components.Components:
+			f.addImgButton(40 + 100*(i%5), 280 - 100*(i//5), item.img, item.type, select, (item,))
+			i+=1
 
 
 class Cargo(object):

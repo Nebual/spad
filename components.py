@@ -2,7 +2,12 @@ import pyglet
 import mathlib
 from mathlib import Vector
 import physicalobject, resources
-import math, time
+import math, time, inspect, sys
+
+class Component(object):
+	type = "undefined"
+	licenseCost = 0
+	img = "items/base.png"
 
 class Gun(object):
 	
@@ -27,7 +32,7 @@ class Gun(object):
 			
 	def cannon(self):
 		bulletImg = resources.loadImage("bullet.png", center=True)
-		bullet = physicalobject.Bullet(x=self.ship.x, y=self.ship.y, img=bulletImg, batch=self.window.mainBatch)
+		bullet = physicalobject.Bullet(x=self.ship.x, y=self.ship.y, img=bulletImg, batch=self.window.currentSystem.batch)
 		bullet.rotation = self.ship.rotation
 		angleRadians = -math.radians(self.ship.rotation)
 		bullet.vel.x = (self.ship.vel.x + math.cos(angleRadians) * bullet.maxSpeed)
@@ -41,7 +46,7 @@ class Gun(object):
 		#direction.y *= 100
 		#target = Vector(direction.x - self.ship.x, direction.y - self.ship.y)	
 		bulletImg = resources.loadImage("bullet.png", center=True)
-		bullet = physicalobject.Bullet(x=self.ship.x, y=self.ship.y, img=bulletImg, batch=self.window.mainBatch)
+		bullet = physicalobject.Bullet(x=self.ship.x, y=self.ship.y, img=bulletImg, batch=self.window.currentSystem.batch)
 		bullet.vel.x = ((self.ship.vel.x/2) + tar.x - self.ship.x) * bullet.turretSpeed
 		bullet.vel.y = ((self.ship.vel.y/2) + tar.y - self.ship.y) * bullet.turretSpeed
 		self.window.currentSystem.tempObjs.append(bullet)
@@ -54,3 +59,23 @@ class Gun(object):
 		bullet.vel.x = (self.ship.vel.x + math.cos(angleRadians) * bullet.maxSpeed)
 		bullet.vel.y = (self.ship.vel.y + math.sin(angleRadians) * bullet.maxSpeed)
 		self.window.currentSystem.tempObjs.append(bullet)			
+
+
+class Cannon(Gun, Component):
+	type = "Laser Cannon I"
+	img = "items/laserGun1.png"
+	def __init__(self, ship=None):
+		super(Cannon, self).__init__(ship, gunType="cannon")
+class SingularityGun(Gun, Component):
+	type = "Singularity Launcher"
+	img = "items/singularityGun.png"
+	def __init__(self, ship=None):
+		super(SingularityGun, self).__init__(ship, gunType="grav")
+
+Components = []
+def init():
+	for name, Cls in inspect.getmembers(sys.modules[__name__], inspect.isclass):
+		if Component in Cls.__bases__:
+			#Create a new instance of each component
+			instance = Cls()
+			Components.append(instance)
