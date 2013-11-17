@@ -29,9 +29,12 @@ class PhysicalObject(pyglet.sprite.Sprite):
 		self.x += self.vel.x * dt
 		self.y += self.vel.y * dt
 		
+	def getPath(self, obj, tar):	#find a path from an object to a target
+		return Vector(tar.x - obj.x, tar.y - obj.y)		#straight path
+														#TODO: add pathing around stuff		
 			
 	def pathToDest(self, dt, destination):		#paths to the selected destination
-			path = Vector(destination.x - self.x, destination.y - self.y)					#line from player to destination
+			path = self.getPath(self, destination)					#line from obj to destination
 			self.rotateToPath(path, dt)
 			if mathlib.approxCoTerminal(self.pathAngle, self.rotation, 10):
 				#Are we close enough to start driving?
@@ -124,8 +127,10 @@ class Ship(PhysicalObject):
 				self.opacity -= 510 * dt			
 
 	def die(self, dt):
-		self.mainGuns[:] = []						#deleting guns
-		self.secondaryGuns[:] = []
+		self.mainGuns[:] = []						#deleting components
+		self.secondaryGuns[:] = []					#TODO: unload components funct
+		self.battery[:] = []
+		self.engine = None
 		self.window.currentSystem.ships.remove(self)
 		
 		
