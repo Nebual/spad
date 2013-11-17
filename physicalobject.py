@@ -148,7 +148,7 @@ class Ship(PhysicalObject):
 	def fire(self, gunList, vec=Vector(0,0)):
 		for gun in gunList:
 			if gun != 0:
-				if gun.gunType == "turret":
+				if "turret" in gun.type:
 					gun.fire(vec)
 				else:
 					gun.fire()
@@ -177,7 +177,7 @@ class Player(Ship):
 		self.rotation = 135
 		self.starmode = 1
 		self.keyHandler = key.KeyStateHandler()
-		self.credits = 10000
+		self.credits = 40000
 		self.licenses = {}
 		
 		@self.window.event
@@ -317,9 +317,10 @@ class Planet(PhysicalObject):
 			self.name = "GAS_%.4d" % rand.randrange(1,9999)
 		if self.hasTrade:
 			if rand.random() < 0.90: self.goods["food"] = 		80	+ int(rand.random()*4)*20	#80-160
-			if rand.random() < 0.75: self.goods["steel"] = 		200	+ int(rand.random()*4)*50	#200-400
+			if rand.random() < 0.85: self.goods["steel"] = 		200	+ int(rand.random()*4)*50	#200-400
 			if rand.random() < 0.75: self.goods["lithium"] = 	600	+ int(rand.random()*4)*100 	#600-1000
-			if rand.random() < 0.75: self.goods["medicine"] = 	300	+ int(rand.random()*4)*75	#300-600
+			if rand.random() < 0.75: self.goods["silicon"] = 	400	+ int(rand.random()*3)*100	#400-700
+			if rand.random() < 0.80: self.goods["medicine"] = 	300	+ int(rand.random()*4)*75	#300-600
 		
 class Sun(Planet):
 	isSun = True

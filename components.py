@@ -5,9 +5,13 @@ import physicalobject, resources
 import math, time, inspect, sys
 
 class Component(object):
-	type = "component"
-	licenseCost = 0
-	img = "items/base.png"
+	category = "" 		#Broad, used by shop tab, like "weapon", "engine", "sensor"
+	type = "" 			#Narrow, describes how the component works, like "lasercannon", "laserturret", "ionthruster"
+	subType = "" 		#Unique to a particular combination of attributes, like "lasercannonsmall", "gravgun100"
+	name = ""			#Player viewable pretty name, like "Pulse Laser Turret - 10W", "Singularity Launcher"
+	img = "items/base.png" #Used by the shop
+	licenseCost = 0		#In credits
+	goodsCost = {}		#Keys are materials, values are # of tons of that material required for crafting
 	def __init__(self, ship=None):
 		self.ship = ship
 		
@@ -21,19 +25,21 @@ class Component(object):
 class Gun(Component):
 	category = "weapon"
 	
-	def __init__(self, gunType="cannon", *args, **kwargs):
+	delay = 0.25
+	
+	def __init__(self, *args, **kwargs):
 		super(Gun, self).__init__(*args, **kwargs)
 		self.window = pyglet.window.get_platform().get_default_display().get_windows()[0]	
 		self.shootTime = time.time()
-		self.delay = 0.25
-		self.gunType = gunType	
 
 class Cannon(Gun):
 	type = "cannon"
+	subType = "laserGun1"
+	name = "Pulse Laser Cannon - 10W"
 	img = "items/laserGun1.png"
-	def __init__(self):
-		super(Cannon, self).__init__(gunType="cannon")
-		
+	licenseCost = 3000
+	goodsCost = {"steel": 5, "lithium": 5}
+	
 	def fire(self):	
 		if time.time() > self.shootTime:		
 			bulletImg = resources.loadImage("bullet.png", center=True)
@@ -47,9 +53,12 @@ class Cannon(Gun):
 		
 class Turret(Gun):
 	type = "turret"
-	def __init__(self, vec=Vector(0,0)):
-		super(Turret, self).__init__(gunType="turret")				
-		
+	subType = "laserTurret1"
+	name = "Pulse Laser Turret - 10W"
+	img = "items/laserGun1.png"	
+	licenseCost = 5000
+	goodsCost = {"steel": 7, "lithium": 5}
+	
 	def fire(self):	
 		if time.time() > self.shootTime:		
 			#direction = tar.normalized()
@@ -65,11 +74,14 @@ class Turret(Gun):
 				
 class GravGun(Gun):
 	type = "gravgun"
+	subType = "gravgun"
 	img = "items/gravGun.png"
-	def __init__(self):
-		super(GravGun, self).__init__(gunType="grav")
-		self.delay = 2
-				
+	name = "Singularity Launcher"
+	licenseCost = 7000 #TODO: This should be balanced to be way more expensive
+	goodsCost = {"steel": 1, "medicine": 1}
+	
+	delay = 2
+	
 	def fire(self):	
 		if time.time() > self.shootTime:		
 			bulletImg = resources.loadImage("bullet.png", center=True)
@@ -82,21 +94,37 @@ class GravGun(Gun):
 			self.shootTime = time.time() + self.delay			
 
 class Engine(Component):
+	type = "engine"
+	subType = "engine"
+	name = "Engine"
 	
 	def __init__(self, *args, **kwargs):
 		super(Engine, self).__init__(*args, **kwargs)
 		self.strength = 200
+class Engine2(Component):
+	type = "engine2"
+	subType = "engine2"
+	name = "Engine2"
+	
+	def __init__(self, *args, **kwargs):
+		super(Engine2, self).__init__(*args, **kwargs)
+		self.strength = 300
 
 class Battery(Component):
-	
+	img = "items/battery.png"
+	type = "battery"
+	subType = "battery"
+	name = "Battery"
 	def __init__(self, *args, **kwargs):
 		super(Battery, self).__init__(*args, **kwargs)
 		self.capacity = 100
 
-Components = []
+Components = [] #To populate the shop
 def init():
 	for name, Cls in inspect.getmembers(sys.modules[__name__], inspect.isclass):
 		if issubclass(Cls, Component):
 			#Create a new instance of each component
 			instance = Cls()
-			Components.append(instance)
+			if instance.name: 
+				#Don't put it in the shop unless it has a name (to block parent classes)
+				Components.append(instance)

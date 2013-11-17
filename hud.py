@@ -52,7 +52,7 @@ class Button(pyglet.sprite.Sprite):
 	def __init__(self, x, y, text, callback=lambda: 0, args=(), size="500", scale=1, batch=None):
 		super(Button, self).__init__(img=resources.loadImage("button_"+str(size)+".png", center=True), x=x, y=y, batch=batch, group=group1)
 		self.scale = scale
-		self.label = pyglet.text.Label(text=text, x=self.x, y=self.y, anchor_x="center", anchor_y="center", batch=batch, group=group2)
+		self.label = pyglet.text.Label(text=text, x=self.x, y=self.y, font_size=24*scale, anchor_x="center", anchor_y="center", batch=batch, group=group2)
 		self.pressed = self.pressedBackup = callback
 		self.args = self.argsBackup = args
 	
@@ -66,10 +66,12 @@ class Button(pyglet.sprite.Sprite):
 			self.pressed = self.pressedBackup
 			self.args = self.argsBackup
 			self.label.color = self.label.color[:-1] + (255,) #Reset alpha
+			self.color = (255,255,255)
 		else:
 			self.pressed = lambda: 0
 			self.args = ()
-			self.label.color = self.label.color[:-1] + (127,) #Set the alpha to 50% to make it look greyed out
+			self.label.color = self.label.color[:-1] + (20,) #Set the alpha to make it look greyed out
+			self.color = (100,100,100)
 class ImgButton(pyglet.sprite.Sprite):
 	_enabled = True
 	def __init__(self, x, y, img="items/base.png", text="", callback=lambda: 0, args=(), scale=1, batch=None):
@@ -108,7 +110,7 @@ class Frame(object):
 		self.background = pyglet.sprite.Sprite(img=largeWindow, x=self.window.width/2, y=self.window.height/2, batch=self.batch, group=group0)
 		self.background.scale = self.scale
 		
-		self.titleLabel = pyglet.text.Label(text=title, x=self.window.width/2, y=self.window.height/2 + 400*self.scale - 25, anchor_x="center", batch=self.batch, group=group1)
+		self.titleLabel = self.addLabel(text=title, x=0, y=370, anchor_x="center")
 		
 		if start: self.start()
 		
@@ -116,9 +118,8 @@ class Frame(object):
 		but = Button(self.window.width/2 + x*self.scale, self.window.height/2 + y*self.scale, text, callback, args, size, scale=self.scale, batch=self.batch)
 		self.buttons.append(but)
 		return but
-	def addLabel(self,x,y,text, anchor_x="center"):
-		label = pyglet.text.Label(text=text, font_name=monoFont,x=self.window.width/2 + x*self.scale, y=self.window.height/2 + y*self.scale, anchor_x=anchor_x, anchor_y="center", batch=self.batch, group=group1)
-		label.scale = self.scale
+	def addLabel(self, x, y, text, font=monoFont, anchor_x="center"):
+		label = pyglet.text.Label(text=text, font_name=font, font_size=24*self.scale, x=self.window.width/2 + x*self.scale, y=self.window.height/2 + y*self.scale, anchor_x=anchor_x, anchor_y="center", batch=self.batch, group=group1)
 		self.elements.append(label)
 		return label
 	def addImgButton(self, x, y, img, text="", callback=lambda: 0, args=()):
@@ -210,13 +211,16 @@ class PlanetFrame(Frame):
 		ply = self.window.playerShip
 		
 		def update():
-			f.licenseButton.enabled = f.selected and not ply.licenses[f.selected.type] and ply.credits >= f.selected.licenseCost
-			f.buildButton.enabled = f.selected and ply.licenses[f.selected.type]#Also check they have the cargo/$$$
+			f.licenseButton.enabled = f.selected and f.selected.subType not in ply.licenses and ply.credits >= f.selected.licenseCost
+			f.buildButton.enabled   = f.selected and f.selected.subType in ply.licenses#Also check they have the cargo/$$$
+			f.nameLabel.text = f.selected and f.selected.name or ""
+			f.licenseCost.text = f.selected and ("$%d" % f.selected.licenseCost) or "$0"
+			
 		
 		def buyLicense():
 			#Check if nothings selected, or the player already owns that license, or if the player lacks the money
-			if f.selected and not ply.licenses[f.selected.type] and ply.credits >= f.selected.licenseCost:
-				ply.licenses[f.selected.type] = True
+			if f.selected and f.selected.subType not in ply.licenses and ply.credits >= f.selected.licenseCost:
+				ply.licenses[f.selected.subType] = True
 				ply.credits -= f.selected.licenseCost
 				update()
 		
@@ -227,24 +231,25 @@ class PlanetFrame(Frame):
 		
 		def select(item):
 			f.selected = item
+			update()
 		i = 0
 		f.items = []
 		for item in components.Components:
-			f.addImgButton(40 + 100*(i%5), 280 - 100*(i//5), item.img, item.type, select, (item,))
+			f.addImgButton(75 + 100*(i%5), 280 - 100*(i//5), item.img, item.type, select, (item,))
 			i+=1
+		
+		f.nameLabel = f.addLabel(-300, 325, "")
 
 
 class Cargo(object):
-	def __init__(self, kind, quantity=1):			#mass in tonnes per cubic meter
+	MASSES = {#mass in tonnes per cubic meter
+		"food": 2.0,
+		"steel": 7.85,
+		"lithium": 3.5,
+		"silicon": 2.0,
+		"medicine": 1.5,
+	}
+	def __init__(self, kind, quantity=1):
 		self.kind = kind
 		self.quantity = quantity
-		self.mass = 1.0
-		
-		if self.kind == "food":
-			self.mass = 0.04
-		elif self.kind == "steel":
-			self.mass = 7.85
-		elif self.kind == "lithium":
-			self.mass = 0.1
-		elif self.kind == "medicine":
-			self.mass = 0.05
+		self.mass = self.MASSES.get(self.kind, 1.0)
