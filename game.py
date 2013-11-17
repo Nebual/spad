@@ -84,14 +84,24 @@ class GameWindow(pyglet.window.Window):
 			
 
 argparser = OptionParser()
-argparser.add_option("-f", "--fullscreen", action="store_true", dest="fullscreen", default=False, help="Load game at max resolution, in a nobordered window")
+argparser.add_option("-f", "--fullscreen", action="store_true", dest="fullscreen", default=False, help="Load game at max resolution")
+argparser.add_option("--noborder", "--borderless", action="store_true", dest="noborder", default=False, help="Load game in a nobordered window")
+
+def sizeCallback(option, opt, value, parser):
+	args = value.split(',')
+	if len(args) > 0: parser.values.size[0] = int(args[0])
+	if len(args) > 1: parser.values.size[1] = int(args[1])
+argparser.add_option("-w", "-s", "--width", "--size", type='string', dest="size", default=[800, 600], action='callback', callback=sizeCallback, metavar="800,600",help="Specify custom width,height to use")
 
 options, args = argparser.parse_args()
+style = options.noborder and pyglet.window.Window.WINDOW_STYLE_BORDERLESS or None
 if options.fullscreen:
 	screen = pyglet.window.get_platform().get_default_display().get_default_screen()
-	gameWindow = GameWindow(screen.width, screen.height, style=pyglet.window.Window.WINDOW_STYLE_BORDERLESS)
+	gameWindow = GameWindow(screen.width, screen.height, style=style)
+	gameWindow.set_location(0,0)
 else:
-	gameWindow = GameWindow(800, 600)
+	gameWindow = GameWindow(options.size[0], options.size[1], style=style)
+
 pyglet.clock.set_fps_limit(60)
 	
 if __name__ == '__main__':
