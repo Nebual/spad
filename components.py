@@ -65,7 +65,7 @@ class Turret(Gun):
 				
 class GravGun(Gun):
 	type = "gravgun"
-	img = "items/GravGun.png"
+	img = "items/gravGun.png"
 	def __init__(self):
 		super(GravGun, self).__init__(gunType="grav")
 		self.delay = 2
