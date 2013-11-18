@@ -18,7 +18,8 @@ class PhysicalObject(pyglet.sprite.Sprite):
 		self.rotateSpeed = 200.0
 		self.pathAngle = 0
 		self.baseThrust = 300.0
-		self.thrust = self.baseThrust			
+		self.thrust = self.baseThrust
+		self.closing = False		#TODO: find a way around this var	
 		
 		
 	def update(self, dt):					#updates position, accounting for time elapsed (dt)
@@ -56,18 +57,15 @@ class PhysicalObject(pyglet.sprite.Sprite):
 		
 	def chase(self, dt, tar, stoppingDist=100, speed=0.25):	#same as path but designed for ships chasing other ships
 			path = self.getPath(self, tar)					#line from obj to destination
-			oppVel = self.vel * (-1)
-			oppVelAngle = -1*(math.degrees(math.atan2(float(self.vel.y), self.vel.x)))
 			self.rotateToPath(path, dt)
-			closing = False
-			if mathlib.approxCoTerminal(self.pathAngle, self.rotation, 10) or mathlib.approxCoTerminal(oppVelAngle, self.rotation, 10):	
+			if mathlib.approxCoTerminal(self.pathAngle, self.rotation, 10):	#we're more or less pointing at our target
 				if path.length() > stoppingDist*2:	#if we're getting too far away, stop
-					if self.vel.length() > 5 and not closing:	#so long as we're still stopping
+					if self.vel.length() > 5 and not self.closing:	#so long as we're still stopping
 						self.brake(dt)
-					elif self.vel.length <= 5:		#done stopping, start closing
-						closing = True
+					else:		#done stopping, start closing
+						self.closing = True
 				if path.length() <= stoppingDist*2:	#within a good range again, stop closing
-					closing = False
+					self.closing = False
 				if path.length() >= stoppingDist:	#if we're further than the distance we want to stop at, keep accelerating
 					self.increaseThrust(dt, speed)
 				elif path.length() < stoppingDist:	#if we're close enough, brake
@@ -165,9 +163,9 @@ class Ship(PhysicalObject):
 		if s > self.maxSpeed:
 			self.vel *= self.maxSpeed / s
 			
-	def brake(self, dt):
-		self.vel.x -= (self.vel.x > 0 and 1 or -1) * min(self.thrust * 0.75 * dt, abs(self.vel.x))
-		self.vel.y -= (self.vel.y > 0 and 1 or -1) * min(self.thrust * 0.75 * dt, abs(self.vel.y))				
+	def brake(self, dt, mul=0.75):
+		self.vel.x -= (self.vel.x > 0 and 1 or -1) * min(self.thrust * mul * dt, abs(self.vel.x))
+		self.vel.y -= (self.vel.y > 0 and 1 or -1) * min(self.thrust * mul * dt, abs(self.vel.y))				
 	
 	def fire(self, gunList, vec=Vector(0,0)):
 		for gun in gunList:
