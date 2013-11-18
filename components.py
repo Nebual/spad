@@ -78,7 +78,7 @@ class GravGun(Gun):
 	img = "items/gravGun.png"
 	name = "Singularity Launcher"
 	licenseCost = 7000 #TODO: This should be balanced to be way more expensive
-	goodsCost = {"steel": 1, "medicine": 1}
+	goodsCost = {"steel": 1, "lithium": 1, "medicine": 1}
 	
 	delay = 2
 	

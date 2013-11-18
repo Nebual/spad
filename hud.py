@@ -118,8 +118,8 @@ class Frame(object):
 		but = Button(self.window.width/2 + x*self.scale, self.window.height/2 + y*self.scale, text, callback, args, size, scale=self.scale, batch=self.batch)
 		self.buttons.append(but)
 		return but
-	def addLabel(self, x, y, text, font=monoFont, anchor_x="center"):
-		label = pyglet.text.Label(text=text, font_name=font, font_size=24*self.scale, x=self.window.width/2 + x*self.scale, y=self.window.height/2 + y*self.scale, anchor_x=anchor_x, anchor_y="center", batch=self.batch, group=group1)
+	def addLabel(self, x, y, text, font=monoFont, anchor_x="center", anchor_y="center"):
+		label = pyglet.text.Label(text=text, font_name=font, font_size=24*self.scale, x=self.window.width/2 + x*self.scale, y=self.window.height/2 + y*self.scale, anchor_x=anchor_x, anchor_y=anchor_y, batch=self.batch, group=group1)
 		self.elements.append(label)
 		return label
 	def addImgButton(self, x, y, img, text="", callback=lambda: 0, args=()):
@@ -215,6 +215,7 @@ class PlanetFrame(Frame):
 			f.buildButton.enabled   = f.selected and f.selected.subType in ply.licenses#Also check they have the cargo/$$$
 			f.nameLabel.text = f.selected and f.selected.name or ""
 			f.licenseCost.text = f.selected and ("$%d" % f.selected.licenseCost) or "$0"
+			f.materialsLabel.text = f.selected and ("\n".join([mat + ": " + str(amt) for mat,amt in f.selected.goodsCost.items()])) or ""
 			
 		
 		def buyLicense():
@@ -239,6 +240,10 @@ class PlanetFrame(Frame):
 			i+=1
 		
 		f.nameLabel = f.addLabel(-300, 325, "")
+		
+		f.materialsLabel = f.addLabel(-550, -245, "", anchor_x="left", anchor_y="bottom")
+		f.materialsLabel.width = 500 * f.scale
+		f.materialsLabel.multiline = True
 
 
 class Cargo(object):
