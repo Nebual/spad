@@ -74,6 +74,7 @@ class GameWindow(pyglet.window.Window):
 		self.currentSystem = solarsystem.SolarSystem(x=0, y=0, seed=target)
 		self.background.generate(seed=self.currentSystem.seed)
 		
+		
 		self.playerShip.position = (750, 750)
 		self.playerShip.vel = Vector(-440, -440)
 		self.camera = Vector(100, 200)

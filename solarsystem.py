@@ -1,6 +1,6 @@
 import pyglet
 import random, os
-import physicalobject, resources
+import physicalobject, resources, ai
 from mathlib import Vector
 
 planetImages = [x for x in os.listdir("resources/planets/") if "png" in x or "jpg" in x]
@@ -64,7 +64,8 @@ class SolarSystem(object):
 	def populateShips(self):
 		dummyImg = resources.loadImage("playership.png", center=True)					#test stuff
 		pos = 1000		
-		for i in xrange(3):
-			ship = physicalobject.AIShip(x=pos, y=0, img=dummyImg, batch=self.batch, group=self.group2)
+		for i in xrange(1):
+			ship = physicalobject.Ship(x=pos, y=0, img=dummyImg, batch=self.batch, group=self.group2)
 			pos += 100
+			ship.ai = ai.ShipAI(ship=ship)
 			self.ships.append(ship)

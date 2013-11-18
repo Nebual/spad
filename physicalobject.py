@@ -1,6 +1,6 @@
 import pyglet
 from pyglet.window import key
-import resources, hud, components
+import resources, hud, components, ai
 import math
 import mathlib
 
@@ -33,14 +33,14 @@ class PhysicalObject(pyglet.sprite.Sprite):
 		return Vector(tar.x - obj.x, tar.y - obj.y)		#straight path
 														#TODO: add pathing around stuff		
 			
-	def pathToDest(self, dt, destination):		#paths to the selected destination
-			path = self.getPath(self, destination)					#line from obj to destination
+	def pathToDest(self, dt, tar, stoppingDist=100, speed=0.25):	#path to within stoppingDist of destination at a percentage of normal thrust
+			path = self.getPath(self, tar)					#line from obj to destination
 			self.rotateToPath(path, dt)
 			if mathlib.approxCoTerminal(self.pathAngle, self.rotation, 10):
 				#Are we close enough to start driving?
-				if path.length() >= 200:	#if we're further than twice the object away
-					self.increaseThrust(dt, 0.25)
-				elif path.length() < 25:
+				if path.length() >= stoppingDist:	#if we're further than the distance we want to stop at, keep accelerating
+					self.increaseThrust(dt, speed)
+				elif path.length() < stoppingDist:	#if we're close enough, brake
 					self.brake(dt)				
 		
 	def rotateToPath(self, path, dt):
@@ -52,7 +52,26 @@ class PhysicalObject(pyglet.sprite.Sprite):
 			elif path.y < 0:											# if path is directly below us
 				self.pathAngle = 90				
 		angdiff = mathlib.angDiff(self.pathAngle, self.rotation)		
-		self.rotation += min(self.rotateSpeed * dt, abs(angdiff)) * -mathlib.sign(angdiff)		
+		self.rotation += min(self.rotateSpeed * dt, abs(angdiff)) * -mathlib.sign(angdiff)	
+		
+	def chase(self, dt, tar, stoppingDist=100, speed=0.25):	#same as path but designed for ships chasing other ships
+			path = self.getPath(self, tar)					#line from obj to destination
+			oppVel = self.vel * (-1)
+			oppVelAngle = -1*(math.degrees(math.atan2(float(self.vel.y), self.vel.x)))
+			self.rotateToPath(path, dt)
+			closing = False
+			if mathlib.approxCoTerminal(self.pathAngle, self.rotation, 10) or mathlib.approxCoTerminal(oppVelAngle, self.rotation, 10):	
+				if path.length() > stoppingDist*2:	#if we're getting too far away, stop
+					if self.vel.length() > 5 and not closing:	#so long as we're still stopping
+						self.brake(dt)
+					elif self.vel.length <= 5:		#done stopping, start closing
+						closing = True
+				if path.length() <= stoppingDist*2:	#within a good range again, stop closing
+					closing = False
+				if path.length() >= stoppingDist:	#if we're further than the distance we want to stop at, keep accelerating
+					self.increaseThrust(dt, speed)
+				elif path.length() < stoppingDist:	#if we're close enough, brake
+					self.brake(dt)					
 				
 	def gravitate(self, dt, planet):
 		if planet.gravity != 0:
@@ -72,6 +91,8 @@ class PhysicalObject(pyglet.sprite.Sprite):
 class Ship(PhysicalObject):											
 	def __init__(self, *args, **kwargs):
 		super(Ship, self).__init__(*args, **kwargs)
+		self.ai = None
+		self.faction = "bad"
 		self.hp = 30
 		self.dead = False
 		self.shipType = "light"
@@ -92,6 +113,8 @@ class Ship(PhysicalObject):
 		super(Ship, self).update(dt)	
 		if self.hp <= 0:
 			self.explode(dt)
+		if self.ai != None:
+			self.ai.update(dt)
 		
 	def updateMass(self):							#update mass and thrust based on how much cargo we have
 		self.mass = self.baseMass
@@ -102,7 +125,7 @@ class Ship(PhysicalObject):
 		
 	def initComponents(self):									#default components, should later read in from somewhere 
 		for gun in self.mainGuns:
-			newGun = components.GravGun()
+			newGun = components.Cannon()
 			newGun.addToShip(ship=self, slot=self.mainGuns)
 		for gun in self.secondaryGuns:
 			newGun = components.Turret()
@@ -129,8 +152,9 @@ class Ship(PhysicalObject):
 	def die(self, dt):
 		self.mainGuns[:] = []						#deleting components
 		self.secondaryGuns[:] = []					#TODO: unload components funct
-		self.battery[:] = []
+		self.battery[:] = []						#possibly make a components dict for easy cleaning
 		self.engine = None
+		self.ai = None
 		self.window.currentSystem.ships.remove(self)
 		
 		
@@ -173,6 +197,7 @@ class Player(Ship):
 	def __init__(self, *args, **kwargs):
 		playerImage = resources.loadImage("playership.png", center=True)	#player texture
 		super(Player, self).__init__(img=playerImage, *args, **kwargs)
+		self.faction = "good"
 		self.hp = 1000 #We don't want player to die right now
 		self.rotation = 135
 		self.starmode = 1
@@ -257,7 +282,7 @@ class Player(Ship):
 			if not self.window.hud.selected:
 				self.window.hud.select(self.window.currentSystem.nearestPlanet(Vector(self.x, self.y)))
 			dest = self.window.hud.selected
-			self.pathToDest(dt, dest)
+			self.pathToDest(dt, dest, 100, 0.25)
 		if self.keyHandler[key.SPACE]:
 			self.fire(self.mainGuns)
 		self.updateCamera(dt)
@@ -326,11 +351,12 @@ class Sun(Planet):
 	isSun = True
 
 class Bullet(PhysicalObject):
-	def __init__(self, deathTime=0.5, *args, **kwargs):
+	def __init__(self, ship=None, deathTime=0.5, *args, **kwargs):
 		super(Bullet, self).__init__(*args, **kwargs)
 		self.maxSpeed = 600
 		self.turretSpeed = 5
 		self.deathTime = deathTime
+		self.ship = ship			
 		pyglet.clock.schedule_once(self.die, self.deathTime)		
 		
 	def update(self, dt):					#updates position, accounting for time elapsed (dt)		
@@ -348,6 +374,9 @@ class Bullet(PhysicalObject):
 				self.collide(obj)		
 	
 	def collide(self, obj):
+		if hasattr(obj, "faction"):
+			if self.ship.faction == obj.faction:
+				return						#don't collide if ship is the same faction as the one that fired the bullet
 		if hasattr(obj, "hp"):
 			obj.hp -= 10
 			self.die()

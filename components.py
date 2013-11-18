@@ -43,7 +43,7 @@ class Cannon(Gun):
 	def fire(self):	
 		if time.time() > self.shootTime:		
 			bulletImg = resources.loadImage("bullet.png", center=True)
-			bullet = physicalobject.Bullet(x=self.ship.x, y=self.ship.y, img=bulletImg, batch=self.window.currentSystem.batch)
+			bullet = physicalobject.Bullet(ship=self.ship, x=self.ship.x, y=self.ship.y, img=bulletImg, batch=self.window.currentSystem.batch)
 			bullet.rotation = self.ship.rotation
 			angleRadians = -math.radians(self.ship.rotation)
 			bullet.vel.x = (self.ship.vel.x + math.cos(angleRadians) * bullet.maxSpeed)
