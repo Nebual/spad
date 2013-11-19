@@ -425,6 +425,5 @@ class Singularity(Bullet):									#Effect for gravity gun, spawned from GravBul
 			self.die()
 	
 	def collide(self, obj):
-		if hasattr(obj, "hp"):
-			obj.hp -= 10
+		pass
 			

@@ -15,7 +15,8 @@ class GameWindow(pyglet.window.Window):
 		self.hudBatch = pyglet.graphics.Batch() #Drawn after everything
 
 		self.background = Background()
-		self.playerShip = physicalobject.Player(x=0, y=0)		
+		self.playerShip = physicalobject.Player(x=0, y=0)
+				
 		
 		self.push_handlers(self.playerShip.keyHandler)
 
@@ -29,13 +30,13 @@ class GameWindow(pyglet.window.Window):
 		self.hud = hud.HUD(window=self, batch=self.hudBatch)
 		
 		self.currentSystem = solarsystem.SolarSystem(x=0, y=0, seed=0)
-		
+		self.currentSystem.ships.append(self.playerShip)
 		components.init()
 	
 		pyglet.clock.schedule_interval(self.update, 1/60.0)
 	def update(self, dt):
 		if not self.paused:
-			self.playerShip.update(dt)
+			#self.playerShip.update(dt)	#player now updated in ships list
 			self.background.update(dt)
 			self.currentSystem.update(dt)
 				
@@ -71,7 +72,9 @@ class GameWindow(pyglet.window.Window):
 		else:
 			return super(GameWindow, self).dispatch_event(event_type, *args)
 	def enterSystem(self, target):
+		self.currentSystem.ships.remove(self.playerShip)
 		self.currentSystem = solarsystem.SolarSystem(x=0, y=0, seed=target)
+		self.currentSystem.ships.append(self.playerShip)
 		self.background.generate(seed=self.currentSystem.seed)
 		
 		
