@@ -258,6 +258,10 @@ class Player(Ship):
 		elif symbol == key.G:
 			self.mainGuns[0] = 0
 			newGun = components.GravGun()
+			newGun.addToShip(ship=self, slot=self.mainGuns)
+		elif symbol == key.M:
+			self.mainGuns[0] = 0
+			newGun = components.MissileGun()
 			newGun.addToShip(ship=self, slot=self.mainGuns)			
 			
 	def keyRelease(self, symbol, modifiers):
@@ -362,7 +366,7 @@ class Bullet(PhysicalObject):
 		self.y += self.vel.y * dt
 		self.checkCollision()
 	
-	def die(self, dt=0):
+	def die(self, dt=0):	#dt because pyglet's clock passes it, but we don't need it
 		pyglet.clock.unschedule(self.die)
 		self.window.currentSystem.tempObjs.remove(self)
 		
@@ -426,4 +430,29 @@ class Singularity(Bullet):									#Effect for gravity gun, spawned from GravBul
 	
 	def collide(self, obj):
 		pass
-			
+		
+class Missile(Bullet, Ship):
+	def __init__(self, *args, **kwargs):
+		super(Missile, self).__init__(*args, **kwargs)
+		self.ai = ai.MissileAI(ship=self)
+		self.faction = self.ship.faction
+		self.maxSpeed = 600
+		self.baseThrust = 1400
+		self.thrust = self.baseThrust
+		
+	def update(self, dt):
+		super(Missile, self).update(dt)
+		if self.ai != None:
+			self.ai.update(dt)
+		
+	def die(self, dt=0):
+		super(Missile, self).die(dt)
+		self.mainGuns[:] = []						#deleting components
+		self.secondaryGuns[:] = []					#TODO: unload components funct
+		self.battery[:] = []						#possibly make a components dict for easy cleaning
+		self.engine = None
+		self.ai = None
+				
+#	def increaseThrust(self, dt, mul):				
+#		self.vel.normalize()
+#		self.vel *= maxSpeed

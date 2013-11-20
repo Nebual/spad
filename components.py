@@ -91,8 +91,27 @@ class GravGun(Gun):
 			bullet.vel.x = (self.ship.vel.x + math.cos(angleRadians) * bullet.maxSpeed)
 			bullet.vel.y = (self.ship.vel.y + math.sin(angleRadians) * bullet.maxSpeed)
 			self.window.currentSystem.tempObjs.append(bullet)
-			self.shootTime = time.time() + self.delay			
-
+			self.shootTime = time.time() + self.delay	
+			
+class MissileGun(Gun):
+	type = "missilegun"
+	supType = "missilegun"
+	img = "items/laserGun1.png"
+	name = "Missile Launcher"
+	
+	delay = 2
+	
+	def fire(self):
+		if time.time() > self.shootTime:		
+			bulletImg = resources.loadImage("bullet.png", center=True)
+			bullet = physicalobject.Missile(ship=self.ship, x=self.ship.x, y=self.ship.y, img=bulletImg, batch=self.window.mainBatch, deathTime=5)
+			bullet.rotation = self.ship.rotation
+			angleRadians = -math.radians(self.ship.rotation)
+			bullet.vel.x = (self.ship.vel.x + math.cos(angleRadians) * bullet.maxSpeed)/2
+			bullet.vel.y = (self.ship.vel.y + math.sin(angleRadians) * bullet.maxSpeed)/2
+			self.window.currentSystem.tempObjs.append(bullet)
+			self.shootTime = time.time() + self.delay	
+			
 class Engine(Component):
 	type = "engine"
 	subType = "engine"
