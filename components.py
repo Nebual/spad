@@ -103,8 +103,9 @@ class MissileGun(Gun):
 	
 	def fire(self):
 		if time.time() > self.shootTime:		
-			bulletImg = resources.loadImage("bullet.png", center=True)
+			bulletImg = resources.loadImage("missile.png", center=True)
 			bullet = physicalobject.Missile(ship=self.ship, x=self.ship.x, y=self.ship.y, img=bulletImg, batch=self.window.mainBatch, deathTime=5)
+			bullet.scale = 0.15
 			bullet.rotation = self.ship.rotation
 			angleRadians = -math.radians(self.ship.rotation)
 			bullet.vel.x = (self.ship.vel.x + math.cos(angleRadians) * bullet.maxSpeed)/2

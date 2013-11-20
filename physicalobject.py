@@ -56,20 +56,18 @@ class PhysicalObject(pyglet.sprite.Sprite):
 		self.rotation += min(self.rotateSpeed * dt, abs(angdiff)) * -mathlib.sign(angdiff)	
 		
 	def chase(self, dt, tar, stoppingDist=100, speed=0.25):	#same as path but designed for ships chasing other ships
-			path = self.getPath(self, tar)					#line from obj to destination
-			self.rotateToPath(path, dt)
-			if mathlib.approxCoTerminal(self.pathAngle, self.rotation, 10):	#we're more or less pointing at our target
-				if path.length() > stoppingDist*2:	#if we're getting too far away, stop
-					if self.vel.length() > 5 and not self.closing:	#so long as we're still stopping
-						self.brake(dt)
-					else:		#done stopping, start closing
-						self.closing = True
-				if path.length() <= stoppingDist*2:	#within a good range again, stop closing
-					self.closing = False
-				if path.length() >= stoppingDist:	#if we're further than the distance we want to stop at, keep accelerating
-					self.increaseThrust(dt, speed)
-				elif path.length() < stoppingDist:	#if we're close enough, brake
-					self.brake(dt)					
+		desiredVel = self.vel * (Vector(*tar.position)-self.position).normalized()	#vector with the direction we want to be going, and same magnitude as our current vel
+		wrongVel = self.vel - desiredVel	#difference between the vel we want and our current vel 
+		path = self.getPath(self, tar)					#line from obj to destination
+		self.rotateToPath(path, dt)
+		
+		if mathlib.approxCoTerminal(self.pathAngle, self.rotation, 10):	#we're more or less pointing at our target
+			if wrongVel.length() > self.maxSpeed/4:
+				self.brake(dt)
+			if path.length() >= stoppingDist:	#if we're further than the distance we want to stop at, keep accelerating
+				self.increaseThrust(dt, speed)
+			elif path.length() < stoppingDist:	#if we're close enough, brake
+				self.brake(dt)					
 				
 	def gravitate(self, dt, planet):
 		if planet.gravity != 0:
@@ -452,7 +450,13 @@ class Missile(Bullet, Ship):
 		self.battery[:] = []						#possibly make a components dict for easy cleaning
 		self.engine = None
 		self.ai = None
-				
-#	def increaseThrust(self, dt, mul):				
-#		self.vel.normalize()
-#		self.vel *= maxSpeed
+		
+class InertialessMissile(Missile):					#TODO: add AI for this, mess with pathing--doesn't need to brake. Goes slow using pathToDest for some reason. 
+	
+	def increaseThrust(self, dt, mul):				#increase speed up to max speed
+		angleRadians = -math.radians(self.rotation)
+		self.vel = Vector(math.cos(angleRadians), math.sin(angleRadians)) * (self.thrust * dt * mul)
+		s = self.vel.length()
+		if s > self.maxSpeed:
+			self.vel *= self.maxSpeed / s		
+	
