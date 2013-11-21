@@ -29,45 +29,6 @@ class PhysicalObject(pyglet.sprite.Sprite):
 			self.gravitate(dt, obj)	
 		self.x += self.vel.x * dt
 		self.y += self.vel.y * dt
-		
-	def getPath(self, obj, tar):	#find a path from an object to a target
-		return Vector(tar.x - obj.x, tar.y - obj.y)		#straight path
-														#TODO: add pathing around stuff		
-			
-	def pathToDest(self, dt, tar, stoppingDist=100, speed=0.25):	#path to within stoppingDist of destination at a percentage of normal thrust
-			path = self.getPath(self, tar)					#line from obj to destination
-			self.rotateToPath(path, dt)
-			if mathlib.approxCoTerminal(self.pathAngle, self.rotation, 10):
-				#Are we close enough to start driving?
-				if path.length() >= stoppingDist:	#if we're further than the distance we want to stop at, keep accelerating
-					self.increaseThrust(dt, speed)
-				elif path.length() < stoppingDist:	#if we're close enough, brake
-					self.brake(dt)				
-		
-	def rotateToPath(self, path, dt):
-		try:
-			self.pathAngle = -1*(math.degrees(math.atan2(float(path.y), path.x)))		#angle of path relative to pos x axis. evaluates between 0 and +180 if below the x-axis, otherwise between 0 and -180, so we have to mess with this a bit		
-		except ZeroDivisionError:										
-			if path.y >= 0:												# if path is directly above us
-				self.pathAngle = -90
-			elif path.y < 0:											# if path is directly below us
-				self.pathAngle = 90				
-		angdiff = mathlib.angDiff(self.pathAngle, self.rotation)		
-		self.rotation += min(self.rotateSpeed * dt, abs(angdiff)) * -mathlib.sign(angdiff)	
-		
-	def chase(self, dt, tar, stoppingDist=100, speed=0.25):	#same as path but designed for ships chasing other ships
-		desiredVel = self.vel * (Vector(*tar.position)-self.position).normalized()	#vector with the direction we want to be going, and same magnitude as our current vel
-		wrongVel = self.vel - desiredVel	#difference between the vel we want and our current vel 
-		path = self.getPath(self, tar)					#line from obj to destination
-		self.rotateToPath(path, dt)
-		
-		if mathlib.approxCoTerminal(self.pathAngle, self.rotation, 10):	#we're more or less pointing at our target
-			if wrongVel.length() > self.maxSpeed/4:
-				self.brake(dt)
-			if path.length() >= stoppingDist:	#if we're further than the distance we want to stop at, keep accelerating
-				self.increaseThrust(dt, speed)
-			elif path.length() < stoppingDist:	#if we're close enough, brake
-				self.brake(dt)					
 				
 	def gravitate(self, dt, planet):
 		if planet.gravity != 0:
@@ -207,6 +168,7 @@ class Player(Ship):
 		self.keyHandler = key.KeyStateHandler()
 		self.credits = 40000
 		self.licenses = {}
+		self.ai = ai.PathAI(ship=self)
 		
 		@self.window.event
 		def on_key_press(symbol, modifiers):
@@ -289,10 +251,13 @@ class Player(Ship):
 			if not self.window.hud.selected:
 				self.window.hud.select(self.window.currentSystem.nearestPlanet(Vector(self.x, self.y)))
 			dest = self.window.hud.selected
-			self.pathToDest(dt, dest, 100, 0.25)
+			self.ai.pathToDest(dt, dest, 100, 0.25)
 		if self.keyHandler[key.SPACE]:
 			self.fire(self.slots["mainGuns"])
+		if self.keyHandler[key.N]:
+			self.fire(self.slots["secondaryGuns"])			
 		self.updateCamera(dt)
+
 		
 	def updateCamera(self, dt):
 		"""Shift the camera to always follow the Player."""
@@ -454,6 +419,7 @@ class Missile(Bullet, Ship):
 		self.maxSpeed = 600
 		self.baseThrust = 1400
 		self.thrust = self.baseThrust
+
 		
 	def update(self, dt):
 		super(Missile, self).update(dt)
