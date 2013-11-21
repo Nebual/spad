@@ -15,15 +15,16 @@ class Component(object):
 	def __init__(self, ship=None):
 		self.ship = ship
 		
-	def addToShip(self, ship, slot):		#add a component to a ship. Slot must be a list, e.g. mainGuns
+	def addToShip(self, ship):		#add a component to a ship
 		self.ship = ship
+		slot = ship.slots[self.category]
 		for i in range(len(slot)):
 			if slot[i] == 0:
 				slot[i] = self
 				break
 
 class Gun(Component):
-	category = "weapon"
+	category = "mainGuns"
 	
 	delay = 0.25
 	
@@ -73,6 +74,7 @@ class Turret(Gun):
 			self.shootTime = time.time() + self.delay	
 				
 class GravGun(Gun):
+	category = "secondaryGuns"
 	type = "gravgun"
 	subType = "gravgun"
 	img = "items/gravGun.png"
@@ -94,17 +96,20 @@ class GravGun(Gun):
 			self.shootTime = time.time() + self.delay	
 			
 class MissileGun(Gun):
+	category = "secondaryGuns"
 	type = "missilegun"
 	supType = "missilegun"
 	img = "items/laserGun1.png"
 	name = "Missile Launcher"
+	licenseCost = 4500
+	goodsCost = {"steel": 3, "lithium": 1}
 	
 	delay = 2
+	missileImg = resources.loadImage("missile.png", center=True)
 	
 	def fire(self):
 		if time.time() > self.shootTime:		
-			bulletImg = resources.loadImage("missile.png", center=True)
-			bullet = physicalobject.Missile(ship=self.ship, x=self.ship.x, y=self.ship.y, img=bulletImg, batch=self.window.mainBatch, deathTime=5)
+			bullet = physicalobject.Missile(ship=self.ship, x=self.ship.x, y=self.ship.y, img=self.missileImg, batch=self.window.mainBatch, deathTime=5)
 			bullet.scale = 0.15
 			bullet.rotation = self.ship.rotation
 			angleRadians = -math.radians(self.ship.rotation)
@@ -114,6 +119,7 @@ class MissileGun(Gun):
 			self.shootTime = time.time() + self.delay	
 			
 class Engine(Component):
+	category = "engines"
 	type = "engine"
 	subType = "engine"
 	name = "Engine"
@@ -122,6 +128,7 @@ class Engine(Component):
 		super(Engine, self).__init__(*args, **kwargs)
 		self.strength = 200
 class Engine2(Component):
+	category = "engines"
 	type = "engine2"
 	subType = "engine2"
 	name = "Engine2"
@@ -131,6 +138,7 @@ class Engine2(Component):
 		self.strength = 300
 
 class Battery(Component):
+	category = "batteries"
 	img = "items/battery.png"
 	type = "battery"
 	subType = "battery"

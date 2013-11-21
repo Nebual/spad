@@ -94,10 +94,12 @@ class Ship(PhysicalObject):
 		self.shipType = "light"
 		self.baseMass = 0
 		self.mass = self.baseMass
-		self.mainGuns = [0 for x in range(1)]							#slots for components (room for 1 by deafault)
-		self.secondaryGuns = [0 for x in range(1)]						#empty slots represented by a 0
-		self.battery = [0 for x in range(1)]
-		self.engine = components.Engine(ship=self)		
+		self.slots = {
+			"mainGuns": [0 for x in range(1)],					#slots for components (room for 1 by default)
+			"secondaryGuns": [0 for x in range(1)],				#empty slots represented by a 0
+			"batteries": [0 for x in range(1)],
+			"engines": [0],
+		}
 		self.cargo = {}
 		self.cargoMax = 50
 		self.credits = 0	
@@ -117,15 +119,22 @@ class Ship(PhysicalObject):
 		self.thrust = self.baseThrust
 		for item in self.cargo.values():
 			self.mass += item.mass * item.quantity
-		self.thrust *= self.engine.strength/self.mass
+		self.thrust *= self.slots["engines"][0].strength/self.mass #TODO: This only handles one engine
+	
+	def addCargo(self, kind, amount):
+		"""Adds (or removes) cargo to the self.cargo hold"""
+		if amount < 0 and kind not in self.cargo: return
+		if kind in self.cargo:
+			self.cargo[kind].quantity += amount
+		else:
+			self.cargo[kind] = Cargo(kind, amount)
+		if self.cargo[kind].quantity <= 0: del self.cargo[kind]
+		self.updateMass()
 		
 	def initComponents(self):									#default components, should later read in from somewhere 
-		for gun in self.mainGuns:
-			newGun = components.Cannon()
-			newGun.addToShip(ship=self, slot=self.mainGuns)
-		for gun in self.secondaryGuns:
-			newGun = components.Turret()
-			newGun.addToShip(ship=self, slot=self.mainGuns)		
+		components.Cannon().addToShip(ship=self)
+		components.Turret().addToShip(ship=self)		
+		components.Engine().addToShip(ship=self)
 			
 	def initShipType(self):
 		if self.shipType == "light":
@@ -146,10 +155,8 @@ class Ship(PhysicalObject):
 				self.opacity -= 510 * dt			
 
 	def die(self, dt):
-		self.mainGuns[:] = []						#deleting components
-		self.secondaryGuns[:] = []					#TODO: unload components funct
-		self.battery[:] = []						#possibly make a components dict for easy cleaning
-		self.engine = None
+		for category in self.slots:
+			self.slots[category][:] = []
 		self.ai = None
 		self.window.currentSystem.ships.remove(self)
 		
@@ -219,7 +226,7 @@ class Player(Ship):
 			if vec.distance((planet.x, planet.y)) < planet.radius:
 				self.window.hud.select(planet)
 		elif button == pyglet.window.mouse.RIGHT:
-				self.fire(self.secondaryGuns, vec)
+				self.fire(self.slots["secondaryGuns"], vec)
 	
 	def keyPress(self, symbol, modifiers):
 		"""This function is run once per key press"""
@@ -250,17 +257,17 @@ class Player(Ship):
 			resources.warpSound.play()
 			pyglet.clock.schedule_interval(self.doWarp, 0.1)
 		elif symbol == key.C:
-			self.mainGuns[0] = 0
+			self.slots["mainGuns"][0] = 0
 			newGun = components.Cannon()
-			newGun.addToShip(ship=self, slot=self.mainGuns) 
+			newGun.addToShip(ship=self) 
 		elif symbol == key.G:
-			self.mainGuns[0] = 0
+			self.slots["mainGuns"][0] = 0
 			newGun = components.GravGun()
-			newGun.addToShip(ship=self, slot=self.mainGuns)
+			newGun.addToShip(ship=self)
 		elif symbol == key.M:
-			self.mainGuns[0] = 0
+			self.slots["mainGuns"][0] = 0
 			newGun = components.MissileGun()
-			newGun.addToShip(ship=self, slot=self.mainGuns)			
+			newGun.addToShip(ship=self)			
 			
 	def keyRelease(self, symbol, modifiers):
 		pass
@@ -284,7 +291,7 @@ class Player(Ship):
 			dest = self.window.hud.selected
 			self.pathToDest(dt, dest, 100, 0.25)
 		if self.keyHandler[key.SPACE]:
-			self.fire(self.mainGuns)
+			self.fire(self.slots["mainGuns"])
 		self.updateCamera(dt)
 		
 	def updateCamera(self, dt):
@@ -349,6 +356,16 @@ class Planet(PhysicalObject):
 		
 class Sun(Planet):
 	isSun = True
+	
+	name = "TEMPORARY DEBUG SUN"
+	habited = True
+	hasTrade = True
+	hasMissions = True
+	hasParts = True
+	hasShipyard = True
+	def __init__(self, *args, **kwargs):
+		super(Sun, self).__init__(*args, **kwargs)
+		self.goods = {"steel": 200, "lithium": 600}
 
 class Bullet(PhysicalObject):
 	def __init__(self, ship=None, deathTime=0.5, *args, **kwargs):
@@ -445,10 +462,8 @@ class Missile(Bullet, Ship):
 		
 	def die(self, dt=0):
 		super(Missile, self).die(dt)
-		self.mainGuns[:] = []						#deleting components
-		self.secondaryGuns[:] = []					#TODO: unload components funct
-		self.battery[:] = []						#possibly make a components dict for easy cleaning
-		self.engine = None
+		for category in self.slots:
+			self.slots[category][:] = []
 		self.ai = None
 		
 class InertialessMissile(Missile):					#TODO: add AI for this, mess with pathing--doesn't need to brake. Goes slow using pathToDest for some reason. 
@@ -460,3 +475,16 @@ class InertialessMissile(Missile):					#TODO: add AI for this, mess with pathing
 		if s > self.maxSpeed:
 			self.vel *= self.maxSpeed / s		
 	
+
+class Cargo(object):
+	MASSES = {#mass in tonnes per cubic meter
+		"food": 2.0,
+		"steel": 7.85,
+		"lithium": 3.5,
+		"silicon": 2.0,
+		"medicine": 1.5,
+	}
+	def __init__(self, kind, quantity=1):
+		self.kind = kind
+		self.quantity = quantity
+		self.mass = self.MASSES.get(self.kind, 1.0)

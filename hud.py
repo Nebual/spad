@@ -173,25 +173,20 @@ class PlanetFrame(Frame):
 			price = self.planet.goods[kind]
 			purchased = min(10, ply.cargoMax - currentCargo, ply.credits / price)
 			
-			if kind in ply.cargo:
-				ply.cargo[kind].quantity += purchased
-			else:
-				ply.cargo[kind] = Cargo(kind, purchased)
+			ply.addCargo(kind, purchased)
 			ply.credits -= price * purchased
+			
 			f.goods[kind+"cargo"].text = str(ply.cargo[kind].quantity)
-			ply.updateMass()
 		def sell(kind):
 			ply = self.window.playerShip
 			if kind not in ply.cargo: return
 			
 			purchased = min((ply.cargo[kind].quantity % 10) or 10, ply.cargo[kind].quantity)
 			
-			ply.cargo[kind].quantity -= purchased
+			ply.addCargo(kind, -purchased)
 			ply.credits += self.planet.goods[kind] * purchased * 0.9
-			if ply.cargo[kind].quantity == 0: del ply.cargo[kind]
 			
 			f.goods[kind+"cargo"].text = str(kind in ply.cargo and ply.cargo[kind].quantity or 0)
-			ply.updateMass()
 		i=0
 		plyCargo = self.window.playerShip.cargo
 		for kind, price in self.planet.goods.items():
@@ -205,6 +200,28 @@ class PlanetFrame(Frame):
 	def openMissions(self):
 		self.missionFrame = Frame("Mission Bounty Board", scale=0.8)
 	
+	def buyCargo(self, order, dryRun=False, remaining=True):
+		"""Attempts to purchase all goods listed in the dict order, depositing them in the Player's cargo holds.
+		Does not care about max cargo.
+		dryRun simply checks if the purchase is possible.
+		remaining controls if the order should be 100% purchased (True), or only purchase goods the player lacks
+		Returns False if some goods are unavailable, 0 if insufficient credits, True if the purchase would work
+		"""
+		ply = self.window.playerShip
+		shop = self.planet.goods
+		toBuy = order.copy()
+		for mat in toBuy:
+			if remaining and mat in ply.cargo:
+				toBuy[mat] -= ply.cargo[mat].quantity
+			if toBuy[mat] > 0:
+				if mat not in shop: return False
+				if shop[mat]*toBuy[mat] > ply.credits: return 0
+		if not dryRun:
+			for mat,amt in toBuy.items():
+				ply.addCargo(mat, amt)
+				ply.credits -= shop[mat] * amt
+		return True
+	
 	def openParts(self):
 		f = self.partsFrame = Frame("Component Fabrication Lab", scale=0.8)
 		f.selected = None
@@ -212,11 +229,16 @@ class PlanetFrame(Frame):
 		
 		def update():
 			f.licenseButton.enabled = f.selected and f.selected.subType not in ply.licenses and ply.credits >= f.selected.licenseCost
-			f.buildButton.enabled   = f.selected and f.selected.subType in ply.licenses#Also check they have the cargo/$$$
+			f.buildButton.enabled   = f.selected and f.selected.subType in ply.licenses and self.buyCargo(f.selected.goodsCost, dryRun=True)
 			f.nameLabel.text = f.selected and f.selected.name or ""
 			f.licenseCost.text = f.selected and ("$%d" % f.selected.licenseCost) or "$0"
-			f.materialsLabel.text = f.selected and ("\n".join([mat + ": " + str(amt) for mat,amt in f.selected.goodsCost.items()])) or ""
 			
+			txt = ""
+			if f.selected:
+				for mat,amt in f.selected.goodsCost.items():
+					current = mat in ply.cargo and str(ply.cargo[mat].quantity) or "0"
+					txt += (mat + ":").ljust(10) + ((mat in self.planet.goods and "*" or "") + current+"/"+str(amt)).rjust(8) + "\n"
+			f.materialsLabel.text = txt
 		
 		def buyLicense():
 			#Check if nothings selected, or the player already owns that license, or if the player lacks the money
@@ -224,11 +246,20 @@ class PlanetFrame(Frame):
 				ply.licenses[f.selected.subType] = True
 				ply.credits -= f.selected.licenseCost
 				update()
+		def build():
+			if f.selected and self.buyCargo(f.selected.goodsCost):
+				if ply.slots[f.selected.category].count(0) == 0:
+					ply.slots[f.selected.category][0] = 0 #TODO: Temporarily replacing the first component, if theres only one slot
+				item = f.selected.__class__()
+				item.addToShip(ship=ply)
+				for mat, amt in f.selected.goodsCost.items():
+					ply.addCargo(mat, -amt)
+				update()
 		
 		f.licenseButton = f.addButton(-450, -280, "License", buyLicense, size="250")
 		f.licenseCost = f.addLabel(-520, -350, "$0", anchor_x="left")
 		
-		f.buildButton = f.addButton(-200, -280, "Build", buyLicense, size="250")
+		f.buildButton = f.addButton(-200, -280, "Build", build, size="250")
 		
 		def select(item):
 			f.selected = item
@@ -244,17 +275,3 @@ class PlanetFrame(Frame):
 		f.materialsLabel = f.addLabel(-550, -245, "", anchor_x="left", anchor_y="bottom")
 		f.materialsLabel.width = 500 * f.scale
 		f.materialsLabel.multiline = True
-
-
-class Cargo(object):
-	MASSES = {#mass in tonnes per cubic meter
-		"food": 2.0,
-		"steel": 7.85,
-		"lithium": 3.5,
-		"silicon": 2.0,
-		"medicine": 1.5,
-	}
-	def __init__(self, kind, quantity=1):
-		self.kind = kind
-		self.quantity = quantity
-		self.mass = self.MASSES.get(self.kind, 1.0)

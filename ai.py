@@ -37,7 +37,7 @@ class AI(object):
 		if self.aggroed:
 			self.ship.chase(dt, tar=target, stoppingDist=target.width*4, speed=1.0)	#keep pathing to target even if they're outside aggro range
 		if tarDist < self.ship.width*4:
-			self.ship.fire(self.ship.mainGuns)
+			self.ship.fire(self.ship.slots["mainGuns"])
 			
 	def pickTarget(self):	
 			tar = self.enemies[0]
