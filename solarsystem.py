@@ -12,6 +12,7 @@ class SolarSystem(object):
 		self.batch = pyglet.graphics.Batch()
 		self.group1 = pyglet.graphics.OrderedGroup(1)
 		self.group2 = pyglet.graphics.OrderedGroup(2)
+		self.group3 = pyglet.graphics.OrderedGroup(3)
 		self.planets = []
 		starImage = resources.loadImage("sun.png", center=True) 
 		self.star = physicalobject.Sun(x=x, y=y, img=starImage, batch=self.batch, group=self.group1)
@@ -31,7 +32,7 @@ class SolarSystem(object):
 			
 			kind = self.rand.choice(planetImages)
 			planetImage = resources.loadImage("planets/"+kind, center=True)
-			newPlanet = physicalobject.Planet(x=self.star.x + newX, y=self.star.y + newY, img=planetImage, batch=self.batch)
+			newPlanet = physicalobject.Planet(x=self.star.x + newX, y=self.star.y + newY, img=planetImage, batch=self.batch, group=self.group1)
 			newPlanet.populate(rand=self.rand, kind=kind)
 			newPlanet.scale *= min(1, 0.65 + self.rand.random() / 2.0)
 			self.planets.append(newPlanet)
@@ -65,7 +66,7 @@ class SolarSystem(object):
 		dummyImg = resources.loadImage("playership.png", center=True)					#test stuff
 		pos = 1000		
 		for i in xrange(1):
-			ship = physicalobject.Ship(x=pos, y=0, img=dummyImg, batch=self.batch, group=self.group2)
+			ship = physicalobject.Ship(x=pos, y=0, img=dummyImg, batch=self.batch, group=self.group3)
 			pos += 100
 			ship.ai = ai.ShipAI(ship=ship)
 			self.ships.append(ship)
