@@ -1,5 +1,4 @@
 import os, sys
-sys.path.append("..")
 from optparse import OptionParser
 import pyglet
 
