@@ -164,7 +164,6 @@ class Player(Ship):
 		self.faction = "good"
 		self.hp = 1000 #We don't want player to die right now
 		self.rotation = 135
-		self.starmode = 1
 		self.keyHandler = key.KeyStateHandler()
 		self.credits = 40000
 		self.licenses = {}
@@ -192,12 +191,7 @@ class Player(Ship):
 	
 	def keyPress(self, symbol, modifiers):
 		"""This function is run once per key press"""
-		if symbol == key.V:
-			self.starmode += 1
-			if self.starmode > 3: self.starmode = 0
-			self.window.hud.modeLabel.text = "Starmode: "+str(self.starmode)
-			self.window.background.generate(mode=self.starmode)
-		elif symbol == key.L:
+		if symbol == key.L:
 			planet = self.window.hud.select(self.window.currentSystem.nearestPlanet(Vector(self.x, self.y)))
 			if isinstance(planet, Planet):
 				if Vector(*self.position).distance(planet.position) < (planet.radius + 20):

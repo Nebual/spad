@@ -21,7 +21,6 @@ class HUD(object):
 		self.minimapPlayer = pyglet.sprite.Sprite(img=resources.loadImage("circle_silver.png"), batch=batch, group=group1)
 		
 		self.sideBG = pyglet.sprite.Sprite(img=resources.loadImage("sidebar.png"), x=hudX, y=hudY, batch=batch, group=group0)
-		self.modeLabel = pyglet.text.Label(text="Starmode: 0", font_size=10,x=hudX+50, y=hudY+180, anchor_x="center", batch=batch, group=group1)
 		self.fpsLabel = pyglet.text.Label(text="FPS: 0", x=hudX+50, y=hudY+160, anchor_x="center", batch=batch, group=group1)
 		self.coordLabel = pyglet.text.Label(text="0,0", font_size=10, x=hudX+50, y=hudY+140, anchor_x="center", batch=batch, group=group1)
 		self.creditLabel = pyglet.text.Label(text="$10000", font_size=10, x=hudX+50, y=hudY+120, anchor_x="center", batch=batch, group=group1)
