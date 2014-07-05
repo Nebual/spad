@@ -160,6 +160,7 @@ class Player(Ship):
 	
 	def __init__(self, *args, **kwargs):
 		playerImage = resources.loadImage("playership.png", center=True)	#player texture
+		resources.textureBorderFix(playerImage)
 		super(Player, self).__init__(img=playerImage, *args, **kwargs)
 		self.faction = "good"
 		self.hp = 1000 #We don't want player to die right now
@@ -231,13 +232,13 @@ class Player(Ship):
 	def update(self, dt):							#player updater, checks for key presses
 		super(Player, self).update(dt)	
 		
-		if self.keyHandler[key.LEFT]:
+		if self.keyHandler[key.LEFT] or self.keyHandler[key.A]:
 			self.rotation -= self.rotateSpeed * dt
-		if self.keyHandler[key.RIGHT]:
+		if self.keyHandler[key.RIGHT] or self.keyHandler[key.D]:
 			self.rotation += self.rotateSpeed * dt
-		if self.keyHandler[key.UP]:
+		if self.keyHandler[key.UP] or self.keyHandler[key.W]:
 			self.increaseThrust(dt, 1)
-		if self.keyHandler[key.DOWN]:
+		if self.keyHandler[key.DOWN] or self.keyHandler[key.S]:
 			self.increaseThrust(dt, -1)
 		if self.keyHandler[key.X]:					#brake
 			self.brake(dt)
