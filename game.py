@@ -77,14 +77,14 @@ class GameWindow(pyglet.window.Window):
 		self.background.generate(seed=self.currentSystem.seed)
 		
 		
-		self.playerShip.position = (750, 750)
-		self.playerShip.vel = Vector(-440, -440)
-		self.camera = Vector(100, 200)
+		self.playerShip.position = self.playerShip.vel * -2.5
+		self.camera = self.playerShip.vel * -2.5
 		
-		pyglet.clock.schedule_interval(self.playerShip.brake, 0.1)
-		def stopBrake(dt): pyglet.clock.unschedule(self.playerShip.brake)
-		pyglet.clock.schedule_once(stopBrake, 2.1)
-			
+		def leaveJumpspeed(dt): 
+			self.playerShip.brake(dt, mul=1)
+			if self.playerShip.vel.length() < 75: pyglet.clock.unschedule(leaveJumpspeed)
+		pyglet.clock.schedule_interval(leaveJumpspeed, 0.1)
+
 
 argparser = OptionParser()
 argparser.add_option("-f", "--fullscreen", action="store_true", dest="fullscreen", default=False, help="Load game at max resolution")
